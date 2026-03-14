@@ -1,0 +1,21 @@
+info:
+  name: Update competitor
+  type: http
+  seq: 8
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/{{api}}/competitors/cmmqsrq2a0001xo6xx1gkefsg"
+  body:
+    type: json
+    data: |-
+      {
+        "type": "PLAYER"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

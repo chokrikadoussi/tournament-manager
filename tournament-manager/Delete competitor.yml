@@ -1,0 +1,15 @@
+info:
+  name: Delete competitor
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/{{api}}/competitors/cmmqsrfr80000xo6xs99un9xi"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
