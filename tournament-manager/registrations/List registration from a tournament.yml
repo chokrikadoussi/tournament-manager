@@ -1,11 +1,11 @@
 info:
-  name: GET competitors
+  name: List registration from a tournament
   type: http
   seq: 1
 
 http:
   method: GET
-  url: "{{baseUrl}}/{{api}}/competitors"
+  url: "{{baseUrl}}/{{api}}/tournaments/cmmqw9dim0000ao6xvz9kmqb3/registrations"
   auth: inherit
 
 settings:
