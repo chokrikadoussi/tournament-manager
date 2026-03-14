@@ -1,11 +1,11 @@
 info:
-  name: Delete competitor
+  name: List tournaments
   type: http
-  seq: 10
+  seq: 1
 
 http:
-  method: DELETE
-  url: "{{baseUrl}}/{{api}}/competitors/cmmqsrfr80000xo6xs99un9xi"
+  method: GET
+  url: "{{baseUrl}}/{{api}}/tournaments"
   auth: inherit
 
 settings:

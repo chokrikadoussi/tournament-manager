@@ -1,0 +1,21 @@
+info:
+  name: Create a tournament
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{baseUrl}}/{{api}}/tournaments"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Tournoi {{$randomInt}}"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

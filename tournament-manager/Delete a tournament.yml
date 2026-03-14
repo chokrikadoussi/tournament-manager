@@ -1,0 +1,15 @@
+info:
+  name: Delete a tournament
+  type: http
+  seq: 12
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/{{api}}/tournaments/cmmqv7vj40000f46xualtfmt2"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

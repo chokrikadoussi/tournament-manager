@@ -1,0 +1,21 @@
+info:
+  name: Update tournament
+  type: http
+  seq: 10
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/{{api}}/tournaments/cmmqv7vj40000f46xualtfmt2"
+  body:
+    type: json
+    data: |-
+      {
+        "status": "DRAFT"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
