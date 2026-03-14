@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TournamentStatus {
+  DRAFT       // Tournoi créé, inscriptions non ouvertes
+  OPEN        // Inscriptions ouvertes
+  IN_PROGRESS // Bracket généré, matchs en cours
+  COMPLETED   // Vainqueur déterminé
+  CANCELLED   // Tournoi annulé
+}
+
+enum MatchStatus {
+  PENDING   // Un ou deux participants encore inconnus
+  READY     // Les deux participants sont connus, match non joué
+  COMPLETED // Résultat enregistré, vainqueur avancé
+  BYE       // Avancement automatique (nombre impair de participants)
+}
+
+enum CompetitorType {
+  PLAYER // Joueur individuel
+  TEAM   // Équipe
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  MIXED // Catégorie mixte (ex: double mixte, open)
+}
+
+model Competitor {
+  id        String         @id @default(cuid())
+  name      String
+  type      CompetitorType @default(PLAYER)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  registrations TournamentRegistration[]
+  matchSlots    MatchParticipant[]
+}
+
+model Tournament {
+  id              String           @id @default(cuid())
+  name            String
+  sport           String?
+  status          TournamentStatus @default(DRAFT)
+  maxParticipants Int?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  categories    Category[]
+  registrations TournamentRegistration[]
+  matches       Match[]
+}
+
+// Catégorie d'un tournoi : regroupe les participants par genre et tranche d'âge.
+// birthYearMin et birthYearMax définissent la tranche d'âge inclusif.
+// Exemples :
+//   2012 Féminin       → birthYearMin: 2012, birthYearMax: 2012
+//   2011-2012 Masculin → birthYearMin: 2011, birthYearMax: 2012
+//   Senior Masculin    → birthYearMin: 1980, birthYearMax: 2005
+//   Open               → birthYearMin: null,  birthYearMax: null
+model Category {
+  id              String           @id @default(cuid())
+  tournamentId    String
+  name            String           // Nom lisible, ex: "2012 Féminin"
+  gender          Gender
+  birthYearMin    Int?             // Année de naissance minimum (incluse), null = sans limite basse
+  birthYearMax    Int?             // Année de naissance maximum (incluse), null = sans limite haute
+  status          TournamentStatus @default(DRAFT)
+  maxParticipants Int?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  tournament    Tournament               @relation(fields: [tournamentId], references: [id])
+  registrations TournamentRegistration[]
+  matches       Match[]
+}
+
+model TournamentRegistration {
+  id           String    @id @default(cuid())
+  tournamentId String
+  competitorId String
+  categoryId   String?   // null en Sprint 1 (sans catégorie) — obligatoire en Sprint 2
+  createdAt    DateTime  @default(now())
+
+  tournament Tournament  @relation(fields: [tournamentId], references: [id])
+  competitor Competitor  @relation(fields: [competitorId], references: [id])
+  category   Category?   @relation(fields: [categoryId], references: [id])
+
+  @@unique([tournamentId, competitorId]) // Sans catégorie : un compétiteur par tournoi
+}
+
+model Match {
+  id           String      @id @default(cuid())
+  tournamentId String
+  categoryId   String?     // null en Sprint 1 — obligatoire en Sprint 2
+  round        Int
+  position     Int
+  status       MatchStatus @default(PENDING)
+  winnerId     String?
+  nextMatchId  String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  tournament   Tournament       @relation(fields: [tournamentId], references: [id])
+  category     Category?        @relation(fields: [categoryId], references: [id])
+  participants MatchParticipant[]
+  nextMatch    Match?           @relation("BracketTree", fields: [nextMatchId], references: [id])
+  prevMatches  Match[]          @relation("BracketTree")
+}
+
+model MatchParticipant {
+  id           String     @id @default(cuid())
+  matchId      String
+  competitorId String
+  slot         Int        // 0 = côté gauche, 1 = côté droit
+
+  match      Match      @relation(fields: [matchId], references: [id])
+  competitor Competitor @relation(fields: [competitorId], references: [id])
+
+  @@unique([matchId, slot])
+  @@unique([matchId, competitorId])
+}
