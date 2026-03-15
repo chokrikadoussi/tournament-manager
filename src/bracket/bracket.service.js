@@ -137,8 +137,6 @@ export async function generateBracket(tournamentId) {
       let status;
       if (match._count.participants === 2) {
         status = MatchStatus.READY;
-      } else if (match._count.participants === 1) {
-        status = MatchStatus.BYE;
       } else {
         status = MatchStatus.BYE;
       }
@@ -199,4 +197,60 @@ async function propagateBye(tx, match, participants) {
       data: { status: MatchStatus.BYE },
     });
   }
+}
+
+export async function getBracket(tournamentId) {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: {
+      id: true,
+      status: true,
+      _count: {
+        select: { registrations: true },
+      },
+    },
+  });
+
+  if (!tournament) {
+    throw new AppError('Tournament not found', 404);
+  }
+
+  if (
+    tournament.status !== TournamentStatus.IN_PROGRESS &&
+    tournament.status !== TournamentStatus.COMPLETED
+  ) {
+    throw new AppError('Bracket has not been generated yet', 400);
+  }
+
+  const totalRounds = getTotalRounds(tournament._count.registrations);
+  const rounds = [];
+
+  for (let round = 1; round <= totalRounds; round++) {
+    const matches = await prisma.match.findMany({
+      where: { tournamentId, round },
+      select: {
+        id: true,
+        position: true,
+        status: true,
+        winnerId: true,
+        participants: {
+          select: {
+            slot: true,
+            competitorId: true,
+            competitor: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { position: 'asc' },
+    });
+    rounds.push({ round, matches });
+  }
+
+  const data = {
+    tournamentId: tournament.id,
+    totalRounds,
+    rounds,
+  };
+
+  return data;
 }
