@@ -1,0 +1,7 @@
+info:
+  name: bracket
+  type: folder
+  seq: 15
+
+request:
+  auth: inherit
