@@ -10,7 +10,7 @@ http:
     type: json
     data: |-
       {
-        "competitorId": "cmmqsrq2a0001xo6xx1gkefsg"
+        "competitorId": "cmmqxz07w0001l06xadxs4onb"
       }
   auth: inherit
 
