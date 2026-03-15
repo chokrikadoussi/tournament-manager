@@ -1,11 +1,3 @@
-// Étape 5 : Transaction Prisma
-// a. Créer tous les Match en base (sans participants)
-// b. Créer les MatchParticipant pour le Round 1
-//    Slot 0 = participants[pos * 2]    (ou BYE si index >= count)
-//    Slot 1 = participants[pos * 2 + 1] (ou BYE si index >= count)
-// c. Pour chaque match avec BYE : voir TOUR-29
-// d. Mettre à jour tournament.status = 'IN_PROGRESS'
-
 import {
   shuffleArray,
   getTotalRounds,
@@ -148,17 +140,63 @@ export async function generateBracket(tournamentId) {
       } else if (match._count.participants === 1) {
         status = MatchStatus.BYE;
       } else {
-        status = MatchStatus.PENDING;
+        status = MatchStatus.BYE;
       }
       await tx.match.update({
         where: { id: match.id },
         data: { status },
       });
     }
-    // 4. tx.tournament.update({ status: 'IN_PROGRESS' })
+
+    // Gestion des byes pour les rounds suivants
+    for (let round = 1; round <= totalRounds - 1; round++) {
+      const matchesToPropagate = await tx.match.findMany({
+        where: { tournamentId, round },
+        include: { participants: true },
+      });
+
+      for (const match of matchesToPropagate) {
+        await propagateBye(tx, match, match.participants);
+      }
+    }
+
     await tx.tournament.update({
       where: { id: tournamentId },
       data: { status: TournamentStatus.IN_PROGRESS },
     });
   });
+}
+
+async function propagateBye(tx, match, participants) {
+  if (participants.length === 1 && match.nextMatchId) {
+    const winner = participants[0];
+    await tx.match.update({
+      where: { id: match.id },
+      data: { winnerId: winner.competitorId },
+    });
+    const slot = match.position % 2;
+    await tx.matchParticipant.create({
+      data: {
+        matchId: match.nextMatchId,
+        competitorId: winner.competitorId,
+        slot,
+      },
+    });
+    const parentCount = await tx.matchParticipant.count({
+      where: { matchId: match.nextMatchId },
+    });
+    if (parentCount === 2) {
+      await tx.match.update({
+        where: { id: match.nextMatchId },
+        data: { status: MatchStatus.READY },
+      });
+    }
+  }
+
+  if (participants.length === 0 && match.round > 1) {
+    await tx.match.update({
+      where: { id: match.id },
+      data: { status: MatchStatus.BYE },
+    });
+  }
 }
