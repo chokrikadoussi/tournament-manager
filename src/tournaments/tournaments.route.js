@@ -3,6 +3,7 @@ import { asyncWrap } from '../lib/asyncWrap.js';
 import * as controller from './tournaments.controller.js';
 import registrationRouter from '../registrations/registrations.router.js';
 import bracketRouter from '../bracket/bracket.route.js';
+import matchesRouter from '../matches/matches.route.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.delete('/:id', asyncWrap(controller.deleteById));
 
 router.use('/:id/registrations', registrationRouter);
 router.use('/:id/bracket', bracketRouter);
+router.use('/:id/matches', matchesRouter);
 
 export default router;
