@@ -38,6 +38,19 @@ enum Gender {
   MIXED // Catégorie mixte (ex: double mixte, open)
 }
 
+// Nouveaux enums
+enum TournamentFormat {
+  SINGLE_ELIM
+  DOUBLE_ELIM
+  ROUND_ROBIN
+}
+
+enum BracketSide {
+  WINNERS
+  LOSERS
+  GRAND_FINAL
+}
+
 model Competitor {
   id        String         @id @default(cuid())
   name      String
@@ -57,6 +70,7 @@ model Tournament {
   maxParticipants Int?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+  format          TournamentFormat @default(SINGLE_ELIM)
 
   categories    Category[]
   registrations TournamentRegistration[]
@@ -112,6 +126,7 @@ model Match {
   nextMatchId  String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+  bracketSide  BracketSide?
 
   tournament   Tournament       @relation(fields: [tournamentId], references: [id])
   category     Category?        @relation(fields: [categoryId], references: [id])
