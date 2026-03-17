@@ -107,6 +107,7 @@ model TournamentRegistration {
   competitorId String
   categoryId   String?   // null en Sprint 1 (sans catégorie) — obligatoire en Sprint 2
   createdAt    DateTime  @default(now())
+  seed         Int?      // Position dans le tirage, utilisée pour le tirage et le placement dans le bracket, null = non classé
 
   tournament Tournament  @relation(fields: [tournamentId], references: [id])
   competitor Competitor  @relation(fields: [competitorId], references: [id])
