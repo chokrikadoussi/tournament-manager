@@ -1,8 +1,12 @@
 import { AppError } from '../lib/AppError.js';
 import * as service from './tournaments.service.js';
-import { TournamentStatus } from '../generated/prisma/client.js';
+import {
+  TournamentStatus,
+  TournamentFormat,
+} from '../generated/prisma/client.js';
 
 const VALID_STATUS = Object.values(TournamentStatus);
+const VALID_FORMATS = Object.values(TournamentFormat);
 
 export const getAll = async (_req, res) => {
   const tournaments = await service.getAll();
@@ -10,10 +14,17 @@ export const getAll = async (_req, res) => {
 };
 
 export const create = async (req, res) => {
-  const { name, sport, maxParticipants } = req.body;
+  const { name, sport, maxParticipants, format } = req.body;
 
   if (!name) {
     throw new AppError('Name is required', 400);
+  }
+
+  if (format && !VALID_FORMATS.includes(format)) {
+    throw new AppError(
+      `format must be one of: ${VALID_FORMATS.join(', ')}`,
+      400,
+    );
   }
 
   if (
@@ -30,6 +41,7 @@ export const create = async (req, res) => {
     name,
     sport,
     maxParticipants,
+    format,
   });
   res.status(201).json(tournament);
 };
@@ -42,11 +54,18 @@ export const getById = async (req, res) => {
 
 export const updateById = async (req, res) => {
   const { id } = req.params;
-  const { name, sport, status, maxParticipants } = req.body;
+  const { name, sport, status, maxParticipants, format } = req.body;
 
   if (status && !VALID_STATUS.includes(status)) {
     throw new AppError(
       `status must be one of: ${VALID_STATUS.join(', ')}`,
+      400,
+    );
+  }
+
+  if (format && !VALID_FORMATS.includes(format)) {
+    throw new AppError(
+      `format must be one of: ${VALID_FORMATS.join(', ')}`,
       400,
     );
   }
@@ -66,6 +85,7 @@ export const updateById = async (req, res) => {
     sport,
     status,
     maxParticipants,
+    format,
   });
   res.json(tournament);
 };
