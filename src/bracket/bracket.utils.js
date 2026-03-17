@@ -27,3 +27,13 @@ export function getTotalRounds(participantCount) {
   const log_base_2 = Math.log2(nextPowerOfTwo(participantCount));
   return Math.ceil(log_base_2);
 }
+
+export function getSeedPositions(bracketSize) {
+  const matchCount = bracketSize / 2;
+  const matchPositions = [];
+  for (let i = 0; i < matchCount / 2; i++) {
+    matchPositions.push(i);
+    matchPositions.push(matchCount - 1 - i);
+  }
+  return matchPositions.map((m) => m * 2);
+}
