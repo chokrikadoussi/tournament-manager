@@ -1,6 +1,14 @@
 import { MatchStatus } from '../../generated/prisma/client.js';
 
-export async function generateRoundRobin(tx, participants, tournamentId) {
+export async function generateRoundRobin(tx, tournamentId, registrations) {
+  const participants = registrations
+    .sort((a, b) => {
+      if (a.seed === null) return 1;
+      if (b.seed === null) return -1;
+      return a.seed - b.seed;
+    })
+    .map((r) => r.competitorId);
+
   // 1. Si n impair → ajouter null dans le tableau (= BYE fictif)
   if (participants.length % 2 === 1) {
     participants.push(null);

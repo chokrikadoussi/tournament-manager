@@ -2,13 +2,19 @@ import {
   shuffleArray,
   getTotalRounds,
   nextPowerOfTwo,
+  getSeedPositions,
 } from '../bracket.utils.js';
 import { MatchStatus } from '../../generated/prisma/client.js';
 
-export async function generateSingleElim(tx, participants, tournamentId) {
+export async function generateSingleElim(
+  tx,
+  participants,
+  tournamentId,
+  registrations,
+) {
   const totalRounds = getTotalRounds(participants.length);
 
-  const shuffledParticipants = shuffleArray([...participants]);
+  const shuffledParticipants = buildSeededOrder(participants, registrations);
 
   const matches = [];
   for (let round = 1; round <= totalRounds; round++) {
@@ -141,3 +147,33 @@ async function propagateBye(tx, match, participants) {
     });
   }
 }
+
+const buildSeededOrder = (participants, registrations) => {
+  // registrations = [{ competitorId, seed }]
+  const bracketSize = nextPowerOfTwo(participants.length);
+  const slots = new Array(bracketSize).fill(null);
+
+  // 1. Trier les seedés (asc), shuffler les non-seedés
+  const seeded = registrations
+    .filter((r) => r.seed !== null)
+    .sort((a, b) => a.seed - b.seed);
+
+  const unseeded = shuffleArray(
+    registrations.filter((r) => r.seed === null).map((r) => r.competitorId),
+  );
+
+  // 2. Placer les seedés aux positions réservées
+  const seedPositions = getSeedPositions(bracketSize);
+  seeded.forEach((reg, i) => {
+    if (seedPositions[i] !== undefined)
+      slots[seedPositions[i]] = reg.competitorId;
+  });
+
+  // 3. Remplir les slots vides avec les non-seedés
+  let u = 0;
+  for (let i = 0; i < bracketSize; i++) {
+    if (slots[i] === null && u < unseeded.length) slots[i] = unseeded[u++];
+  }
+
+  return slots; // array de bracketSize éléments (competitorId | null pour les byes)
+};

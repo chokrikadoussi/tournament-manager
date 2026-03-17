@@ -52,7 +52,7 @@ export async function generateBracket(tournamentId) {
 
   const participants = await prisma.tournamentRegistration.findMany({
     where: { tournamentId },
-    select: { competitorId: true },
+    select: { competitorId: true, seed: true },
     orderBy: { createdAt: 'asc' },
   });
 
@@ -61,11 +61,16 @@ export async function generateBracket(tournamentId) {
   await prisma.$transaction(async (tx) => {
     switch (tournament.format) {
       case TournamentFormat.SINGLE_ELIM:
-        await generateSingleElim(tx, participantIds, tournamentId);
+        await generateSingleElim(
+          tx,
+          participantIds,
+          tournamentId,
+          participants,
+        );
         break;
 
       case TournamentFormat.ROUND_ROBIN:
-        await generateRoundRobin(tx, participantIds, tournamentId);
+        await generateRoundRobin(tx, tournamentId, participants);
         break;
 
       case TournamentFormat.DOUBLE_ELIM:
