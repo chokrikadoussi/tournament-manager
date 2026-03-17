@@ -8,5 +8,6 @@ const router = Router({ mergeParams: true });
 router.get('/', asyncWrap(controller.getAll));
 router.post('/', asyncWrap(controller.register));
 router.delete('/:competitorId', asyncWrap(controller.unregister));
+router.patch('/:competitorId', asyncWrap(controller.updateSeed));
 
 export default router;

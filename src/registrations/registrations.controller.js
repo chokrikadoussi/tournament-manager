@@ -24,3 +24,19 @@ export const unregister = async (req, res) => {
   await service.unregister(id, competitorId);
   res.status(204).send();
 };
+
+export const updateSeed = async (req, res) => {
+  const { id, competitorId } = req.params;
+  const { seed } = req.body;
+
+  if (seed === undefined) {
+    throw new AppError('Seed is required', 400);
+  }
+
+  if (seed !== null && (!Number.isInteger(seed) || seed < 1)) {
+    throw new AppError('Seed must be a positive integer', 400);
+  }
+
+  const registration = await service.updateSeed(id, competitorId, seed);
+  res.json(registration);
+};
