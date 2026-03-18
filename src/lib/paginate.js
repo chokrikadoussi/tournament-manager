@@ -1,0 +1,24 @@
+// parsePagination(query) — extrait et valide page/limit depuis req.query
+// Retourne { page, limit, skip }
+export function parsePagination(query, defaultLimit = 20, maxLimit = 100) {
+  const page = Math.max(1, parseInt(query.page) || 1);
+  const limit = Math.min(
+    maxLimit,
+    Math.max(1, parseInt(query.limit) || defaultLimit),
+  );
+  const skip = (page - 1) * limit;
+  return { page, limit, skip };
+}
+
+// buildPaginatedResponse(data, total, page, limit) — construit la réponse standard
+export function buildPaginatedResponse(data, total, page, limit) {
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
