@@ -1,0 +1,15 @@
+info:
+  name: Open a tournament
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/{{api}}/tournaments/cmmqw9dim0000ao6xvz9kmqb3/open"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

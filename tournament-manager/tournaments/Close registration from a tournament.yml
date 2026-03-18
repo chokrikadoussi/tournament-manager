@@ -1,0 +1,15 @@
+info:
+  name: Close registration from a tournament
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/{{api}}/tournaments/cmmqw9dim0000ao6xvz9kmqb3/close-registration"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

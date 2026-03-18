@@ -5,12 +5,12 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/{{api}}/tournaments/cmmqw9dim0000ao6xvz9kmqb3/matches/cmmrsqa650000gw6xeev08ya9/result"
+  url: "{{baseUrl}}/{{api}}/tournaments/cmmqw9dim0000ao6xvz9kmqb3/matches/cmmrueyka0006586xodsd2cc1/result"
   body:
     type: json
     data: |-
       {
-        "winnerId": "cmmqxz07w0001l06xadxs4onb"
+        "winnerId": "cmmqxz0kz0002l06xfmhiwql7"
       }
   auth: inherit
 

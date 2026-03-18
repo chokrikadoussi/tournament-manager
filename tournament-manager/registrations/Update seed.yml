@@ -1,16 +1,16 @@
 info:
-  name: Update tournament
+  name: Update seed
   type: http
-  seq: 10
+  seq: 4
 
 http:
   method: PATCH
-  url: "{{baseUrl}}/{{api}}/tournaments/cmmqw9dim0000ao6xvz9kmqb3"
+  url: "{{baseUrl}}/{{api}}/tournaments/cmmqw9dim0000ao6xvz9kmqb3/registrations/cmmqxz07w0001l06xadxs4onb"
   body:
     type: json
     data: |-
       {
-        "format": "ROUND_ROBIN"
+        "seed": 2
       }
   auth: inherit
 
