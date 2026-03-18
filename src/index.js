@@ -6,11 +6,16 @@ import cors from 'cors';
 import router from './router.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
+import morgan from 'morgan';
+import { apiLimiter } from './lib/rateLimiter.js';
 
 const app = express();
+const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
+app.use(morgan(morganFormat));
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use('/api', apiLimiter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
