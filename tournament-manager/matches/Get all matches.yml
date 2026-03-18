@@ -8,7 +8,11 @@ http:
   url: "{{baseUrl}}/{{api}}/tournaments/cmmqw9dim0000ao6xvz9kmqb3/matches"
   params:
     - name: round
-      value: "1"
+      value: "2"
+      type: query
+      disabled: true
+    - name: status
+      value: READY
       type: query
       disabled: true
   auth: inherit

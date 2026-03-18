@@ -2,13 +2,20 @@ import { prisma } from '../db.js';
 import { MatchStatus, TournamentStatus } from '../generated/prisma/client.js';
 import { AppError } from '../lib/AppError.js';
 
-export const getAll = async (tournamentId, round) => {
+export const getAll = async (tournamentId, round, status) => {
+  const where = { tournamentId };
+
+  if (round) {
+    where.round = round;
+  }
+  if (status) {
+    where.status = status;
+  }
+
   return prisma.match.findMany({
-    where: {
-      tournamentId,
-      round,
-    },
+    where,
     orderBy: [{ round: 'asc' }, { position: 'asc' }],
+    include: { participants: { include: { competitor: true } } },
   });
 };
 
@@ -74,7 +81,7 @@ export const recordResults = async (tournamentId, matchId, winnerId) => {
       });
     }
 
-    return await tx.match.findUnique({
+    return tx.match.findUnique({
       where: { id: matchId },
       include: { participants: { include: { competitor: true } } },
     });
