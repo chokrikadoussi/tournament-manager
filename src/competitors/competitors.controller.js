@@ -12,7 +12,7 @@ export const getAll = async (req, res) => {
   if (type && !VALID_TYPES.includes(type)) {
     throw new AppError(`type must be one of: ${VALID_TYPES.join(', ')}`, 400);
   }
-  
+
   const [data, total] = await service.getAll(limit, skip, type, search);
   res.json(buildPaginatedResponse(data, total, page, limit));
 };
@@ -54,4 +54,10 @@ export const deleteById = async (req, res) => {
   const { id } = req.params;
   await service.deleteById(id);
   res.status(204).send();
+};
+
+export const getStats = async (req, res) => {
+  const { id } = req.params;
+  const competitor = await service.getStatsById(id);
+  res.json(competitor);
 };

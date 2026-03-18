@@ -10,4 +10,6 @@ router.get('/:id', asyncWrap(controller.getById));
 router.patch('/:id', asyncWrap(controller.updateById));
 router.delete('/:id', asyncWrap(controller.deleteById));
 
+router.get('/:id/stats', asyncWrap(controller.getStats));
+
 export default router;
