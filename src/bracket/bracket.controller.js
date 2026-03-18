@@ -11,6 +11,7 @@ export const generate = async (req, res) => {
 
 export const getBracket = async (req, res) => {
   const { id } = req.params;
-  const bracket = await service.getBracket(id);
+  const { format } = req.query;
+  const bracket = await service.getBracket(id, format);
   res.json(bracket);
 };

@@ -90,12 +90,14 @@ export async function generateBracket(tournamentId, thirdPlaceMatch = false) {
     });
   });
 }
-export async function getBracket(tournamentId, thirdPlaceMatch = false) {
+
+export async function getBracket(tournamentId, format) {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     select: {
       id: true,
       status: true,
+      format: true,
       _count: {
         select: { registrations: true },
       },
@@ -114,6 +116,28 @@ export async function getBracket(tournamentId, thirdPlaceMatch = false) {
   }
 
   const totalRounds = getTotalRounds(tournament._count.registrations);
+
+  if (
+    format === 'visual' &&
+    tournament.format === TournamentFormat.SINGLE_ELIM
+  ) {
+    const allMatches = await prisma.match.findMany({
+      where: { tournamentId },
+      include: {
+        participants: {
+          include: { competitor: true },
+        },
+      },
+    });
+
+    const finalMatch = allMatches.find(
+      (m) => m.round === totalRounds && m.position === 0,
+    );
+
+    const tree = buildTree(finalMatch, allMatches);
+    return { tournamentId: tournament.id, format: 'visual', final: tree };
+  }
+
   const rounds = [];
 
   for (let round = 1; round <= totalRounds; round++) {
@@ -144,4 +168,25 @@ export async function getBracket(tournamentId, thirdPlaceMatch = false) {
   };
 
   return data;
+}
+
+function buildTree(match, allMatches) {
+  const children = allMatches.filter(
+    (m) =>
+      m.round === match.round - 1 &&
+      Math.floor(m.position / 2) === match.position,
+  );
+  return {
+    matchId: match.id,
+    round: match.round,
+    position: match.position,
+    status: match.status,
+    winnerId: match.winnerId,
+    participants: match.participants.map((p) => ({
+      slot: p.slot,
+      competitorId: p.competitorId,
+      name: p.competitor.name,
+    })),
+    children: children.map((child) => buildTree(child, allMatches)),
+  };
 }
