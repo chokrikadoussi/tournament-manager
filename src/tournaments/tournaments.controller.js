@@ -5,7 +5,6 @@ import {
   TournamentFormat,
 } from '../generated/prisma/client.js';
 
-const VALID_STATUS = Object.values(TournamentStatus);
 const VALID_FORMATS = Object.values(TournamentFormat);
 
 export const getAll = async (_req, res) => {
@@ -54,14 +53,7 @@ export const getById = async (req, res) => {
 
 export const updateById = async (req, res) => {
   const { id } = req.params;
-  const { name, sport, status, maxParticipants, format } = req.body;
-
-  if (status && !VALID_STATUS.includes(status)) {
-    throw new AppError(
-      `status must be one of: ${VALID_STATUS.join(', ')}`,
-      400,
-    );
-  }
+  const { name, sport, maxParticipants, format } = req.body;
 
   if (format && !VALID_FORMATS.includes(format)) {
     throw new AppError(
@@ -83,7 +75,6 @@ export const updateById = async (req, res) => {
   const tournament = await service.updateById(id, {
     name,
     sport,
-    status,
     maxParticipants,
     format,
   });
@@ -94,4 +85,25 @@ export const deleteById = async (req, res) => {
   const { id } = req.params;
   await service.deleteById(id);
   res.status(204).send();
+};
+
+export const openTournament = async (req, res) => {
+  const { id } = req.params;
+  const tournament = await service.transitionStatus(id, TournamentStatus.OPEN);
+  res.json(tournament);
+};
+
+export const closeRegistration = async (req, res) => {
+  const { id } = req.params;
+  const tournament = await service.transitionStatus(id, TournamentStatus.DRAFT);
+  res.json(tournament);
+};
+
+export const cancelTournament = async (req, res) => {
+  const { id } = req.params;
+  const tournament = await service.transitionStatus(
+    id,
+    TournamentStatus.CANCELLED,
+  );
+  res.json(tournament);
 };
