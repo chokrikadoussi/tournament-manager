@@ -4,11 +4,12 @@ import * as controller from './tournaments.controller.js';
 import registrationRouter from '../registrations/registrations.router.js';
 import bracketRouter from '../bracket/bracket.route.js';
 import matchesRouter from '../matches/matches.route.js';
+import { writeLimiter } from '../lib/rateLimiter.js';
 
 const router = Router();
 
 router.get('/', asyncWrap(controller.getAll));
-router.post('/', asyncWrap(controller.create));
+router.post('/', writeLimiter, asyncWrap(controller.create));
 router.get('/:id', asyncWrap(controller.getById));
 router.patch('/:id', asyncWrap(controller.updateById));
 router.delete('/:id', asyncWrap(controller.deleteById));
