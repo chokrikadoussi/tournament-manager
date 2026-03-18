@@ -2,7 +2,10 @@ import * as service from './bracket.service.js';
 
 export const generate = async (req, res) => {
   const { id } = req.params;
-  await service.generateBracket(id);
+  const { thirdPlace } = req.query;
+  const thirdPlaceMatch = thirdPlace === 'true';
+
+  await service.generateBracket(id, thirdPlaceMatch);
   res.status(201).json({ message: 'Bracket generated successfully' });
 };
 

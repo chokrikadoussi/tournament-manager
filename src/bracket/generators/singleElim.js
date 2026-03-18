@@ -11,6 +11,7 @@ export async function generateSingleElim(
   participants,
   tournamentId,
   registrations,
+  thirdPlaceMatch = false
 ) {
   const totalRounds = getTotalRounds(participants.length);
 
@@ -57,6 +58,19 @@ export async function generateSingleElim(
         });
       }
     }
+  }
+
+  if (thirdPlaceMatch && totalRounds >= 2) {
+    // Créer un match supplémentaire : round = totalRounds, position = 1
+    // (position 0 = finale, position 1 = petite finale)
+    await tx.match.create({
+      data: {
+        tournamentId,
+        round: totalRounds,
+        position: 1,
+        status: MatchStatus.PENDING, // les participants seront ajoutés après les demi-finales
+      },
+    });
   }
 
   // 2. Créer les MatchParticipant pour Round 1

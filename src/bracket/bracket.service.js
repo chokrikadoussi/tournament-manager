@@ -10,7 +10,7 @@ import { generateSingleElim } from './generators/singleElim.js';
 
 const VALID_STATUS = [TournamentStatus.OPEN, TournamentStatus.DRAFT];
 
-export async function generateBracket(tournamentId) {
+export async function generateBracket(tournamentId, thirdPlaceMatch = false) {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     select: {
@@ -66,6 +66,7 @@ export async function generateBracket(tournamentId) {
           participantIds,
           tournamentId,
           participants,
+          thirdPlaceMatch,
         );
         break;
 
@@ -89,7 +90,7 @@ export async function generateBracket(tournamentId) {
     });
   });
 }
-export async function getBracket(tournamentId) {
+export async function getBracket(tournamentId, thirdPlaceMatch = false) {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     select: {
