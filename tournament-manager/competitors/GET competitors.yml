@@ -6,6 +6,23 @@ info:
 http:
   method: GET
   url: "{{baseUrl}}/{{api}}/competitors"
+  params:
+    - name: page
+      value: "3"
+      type: query
+      disabled: true
+    - name: limit
+      value: "2"
+      type: query
+      disabled: true
+    - name: type
+      value: PLAYER
+      type: query
+      disabled: true
+    - name: search
+      value: klocko
+      type: query
+      disabled: true
   auth: inherit
 
 settings:

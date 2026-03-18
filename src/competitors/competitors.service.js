@@ -1,10 +1,25 @@
 import { prisma } from '../db.js';
 import { AppError } from '../lib/AppError.js';
 
-export const getAll = async () => {
-  return prisma.competitor.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
+export const getAll = async (limit, skip, type, search) => {
+  const where = {};
+  if (type) {
+    where.type = type;
+  }
+
+  if (search) {
+    where.name = { contains: search, mode: 'insensitive' };
+  }
+
+  return prisma.$transaction([
+    prisma.competitor.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      take: limit,
+      skip,
+    }),
+    prisma.competitor.count({ where }),
+  ]);
 };
 
 export const create = async (data) => {
