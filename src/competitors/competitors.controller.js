@@ -1,32 +1,36 @@
-import { AppError } from '../lib/AppError.js';
 import * as service from './competitors.service.js';
 import { CompetitorType } from '../generated/prisma/client.js';
 import { buildPaginatedResponse, parsePagination } from '../lib/paginate.js';
+import {z} from 'zod';
+import { validate } from '../lib/validate.js';
 
 const VALID_TYPES = Object.values(CompetitorType);
 
+const getAllSchema = z.object({
+  type: z.enum(VALID_TYPES).optional(),
+  search: z.string().optional(),
+});
+
+const createSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  type: z.enum(VALID_TYPES).optional(),
+});
+
+const updateSchema = z.object({
+  name: z.string().min(1, 'Name is required').optional(),
+  type: z.enum(VALID_TYPES).optional(),
+});
+
 export const getAll = async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { type, search } = req.query;
-
-  if (type && !VALID_TYPES.includes(type)) {
-    throw new AppError(`type must be one of: ${VALID_TYPES.join(', ')}`, 400);
-  }
+  const { type, search } = validate(getAllSchema, req.query);
 
   const [data, total] = await service.getAll(limit, skip, type, search);
   res.json(buildPaginatedResponse(data, total, page, limit));
 };
 
 export const create = async (req, res) => {
-  const { name, type } = req.body;
-
-  if (!name) {
-    throw new AppError('Name is required', 400);
-  }
-
-  if (type && !VALID_TYPES.includes(type)) {
-    throw new AppError(`type must be one of: ${VALID_TYPES.join(', ')}`, 400);
-  }
+  const { name, type } = validate(createSchema, req.body);
 
   const competitor = await service.create({ name, type });
   res.status(201).json(competitor);
@@ -40,11 +44,7 @@ export const getById = async (req, res) => {
 
 export const updateById = async (req, res) => {
   const { id } = req.params;
-  const { name, type } = req.body;
-
-  if (type && !VALID_TYPES.includes(type)) {
-    throw new AppError(`type must be one of: ${VALID_TYPES.join(', ')}`, 400);
-  }
+  const { name, type } = validate(updateSchema, req.body);
 
   const competitor = await service.updateById(id, { name, type });
   res.json(competitor);
