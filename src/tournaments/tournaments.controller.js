@@ -118,3 +118,9 @@ export const cancelTournament = async (req, res) => {
   );
   res.json(tournament);
 };
+
+export const getStats = async (req, res) => {
+  const { id } = req.params;
+  const stats = await service.getStatsById(id);
+  res.json(stats);
+};

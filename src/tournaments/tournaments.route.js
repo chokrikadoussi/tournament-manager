@@ -16,7 +16,7 @@ router.delete('/:id', asyncWrap(controller.deleteById));
 router.post('/:id/open', asyncWrap(controller.openTournament));
 router.post('/:id/close-registration', asyncWrap(controller.closeRegistration));
 router.post('/:id/cancel', asyncWrap(controller.cancelTournament));
-
+router.get('/:id/stats', asyncWrap(controller.getStats));
 
 router.use('/:id/registrations', registrationRouter);
 router.use('/:id/bracket', bracketRouter);

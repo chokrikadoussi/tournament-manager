@@ -1,6 +1,6 @@
 import { prisma } from '../db.js';
 import { AppError } from '../lib/AppError.js';
-import { TournamentStatus } from '../generated/prisma/client.js';
+import { MatchStatus, TournamentStatus } from '../generated/prisma/client.js';
 
 const TRANSITIONS = {
   DRAFT: ['OPEN', 'CANCELLED'],
@@ -95,4 +95,64 @@ export const transitionStatus = async (id, newStatus) => {
     where: { id },
     data: { status: newStatus },
   });
+};
+
+export const getStatsById = async (id) => {
+  const tournament = await getById(id); // Ensure it exists or throw 404
+
+  if (
+    tournament.status === TournamentStatus.DRAFT ||
+    tournament.status === TournamentStatus.OPEN
+  ) {
+    throw new AppError(
+      'Stats are only available for tournaments that are in progress or completed',
+      400,
+    );
+  }
+
+  const totalMatches = await prisma.match.count({
+    where: { tournamentId: id, status: { not: MatchStatus.BYE } },
+  });
+
+  const completedMatches = await prisma.match.count({
+    where: { tournamentId: id, status: MatchStatus.COMPLETED },
+  });
+
+  const pendingMatches = totalMatches - completedMatches;
+  const completionRate =
+    totalMatches > 0 ? Math.round((completedMatches / totalMatches) * 100) : 0;
+
+  const topCompetitors = await prisma.match.groupBy({
+    by: ['winnerId'],
+    where: { tournamentId: id, status: MatchStatus.COMPLETED },
+    orderBy: { _count: { winnerId: 'desc' } },
+    take: 5,
+    _count: { winnerId: true },
+  });
+  const competitorIds = topCompetitors.map((c) => c.winnerId);
+  const competitors = await prisma.competitor.findMany({
+    where: { id: { in: competitorIds } },
+  });
+  const competitorsMap = Object.fromEntries(
+    competitors.map((c) => [c.id, c.name]),
+  );
+
+  return {
+    tournamentId: tournament.id,
+    name: tournament.name,
+    format: tournament.format,
+    status: tournament.status,
+    stats: {
+      totalMatches,
+      completedMatches,
+      pendingMatches,
+      completionRate,
+      totalParticipants: tournament._count.registrations,
+    },
+    topCompetitors: topCompetitors.map((c) => ({
+      competitorId: c.winnerId,
+      name: competitorsMap[c.winnerId],
+      wins: c._count.winnerId,
+    })),
+  };
 };
