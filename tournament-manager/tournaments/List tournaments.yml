@@ -5,7 +5,12 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/{{api}}/tournaments/"
+  url: "{{baseUrl}}/{{api}}/tournaments"
+  params:
+    - name: status
+      value: DRAFT
+      type: query
+      disabled: true
   auth: inherit
 
 settings:

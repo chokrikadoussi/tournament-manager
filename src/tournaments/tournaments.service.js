@@ -10,10 +10,25 @@ const TRANSITIONS = {
   CANCELLED: [],
 };
 
-export const getAll = async () => {
-  return prisma.tournament.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
+export const getAll = async (limit, skip, status, sport) => {
+  const where = {};
+  if (status) {
+    where.status = status;
+  }
+
+  if (sport) {
+    where.sport = { equals: sport, mode: 'insensitive' };
+  }
+
+  return prisma.$transaction([
+    prisma.tournament.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip,
+    }),
+    prisma.tournament.count({ where }),
+  ]);
 };
 
 export const create = async (data) => {

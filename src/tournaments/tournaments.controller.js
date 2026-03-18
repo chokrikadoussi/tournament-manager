@@ -1,15 +1,26 @@
 import { AppError } from '../lib/AppError.js';
 import * as service from './tournaments.service.js';
 import {
-  TournamentStatus,
   TournamentFormat,
+  TournamentStatus,
 } from '../generated/prisma/client.js';
+import { buildPaginatedResponse, parsePagination } from '../lib/paginate.js';
 
 const VALID_FORMATS = Object.values(TournamentFormat);
+const VALID_STATUSES = Object.values(TournamentStatus);
 
-export const getAll = async (_req, res) => {
-  const tournaments = await service.getAll();
-  res.json(tournaments);
+export const getAll = async (req, res) => {
+  const { page, limit, skip } = parsePagination(req.query);
+  const { status, sport } = req.query;
+
+  if (status && !VALID_STATUSES.includes(status)) {
+    throw new AppError(
+      `status must be one of: ${VALID_STATUSES.join(', ')}`,
+      400,
+    );
+  }
+  const [data, total] = await service.getAll(limit, skip, status, sport);
+  res.json(buildPaginatedResponse(data, total, page, limit));
 };
 
 export const create = async (req, res) => {
