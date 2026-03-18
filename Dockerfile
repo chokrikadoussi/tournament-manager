@@ -18,6 +18,8 @@ RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/src ./src
 
+ENV NODE_ENV=production
+
 USER node
 
 EXPOSE 3000

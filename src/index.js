@@ -9,16 +9,26 @@ import { notFound } from './middleware/notFound.js';
 import morgan from 'morgan';
 import { apiLimiter } from './lib/rateLimiter.js';
 
+if (!process.env.DATABASE_URL) {
+  console.error('FATAL: DATABASE_URL is not set');
+  process.exit(1);
+}
+
 const app = express();
 const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(morganFormat));
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json());
 app.use('/api', apiLimiter);
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', db: 'ok' });
+  } catch {
+    res.status(503).json({ status: 'error', db: 'unreachable' });
+  }
 });
 
 app.use('/api/v1', router);
