@@ -6,3 +6,9 @@ coverage
 
 /src/generated/prisma
 scripts/
+
+frontend/node_modules
+frontend/dist
+frontend/.env
+frontend/*.log
+frontend/coverage
