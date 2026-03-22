@@ -1,10 +1,7 @@
-import { api } from './axios';
+import {api} from './axios.js';
 
-const getAll = async () => {
-  const response = await api.get('/competitors');
-  return response;
-};
+const getAll = () => {
+  return api.get('/competitors');
+}
 
-export default {
-  getAll,
-};
+export default {getAll}
