@@ -12,4 +12,20 @@ const remove = (id) => {
   return api.delete(`/tournaments/${id}`);
 }
 
-export default {getAll, create, remove}
+const getById = (id) => {
+  return api.get(`/tournaments/${id}`);
+}
+
+const openInscriptions = (id) => {
+  return api.post(`/tournaments/${id}/open`);
+}
+
+const closeInscriptions = (id) => {
+  return api.post(`/tournaments/${id}/close-registration`);
+}
+
+const startTournament = (id) => {
+  return api.post(`/tournaments/${id}/bracket`);
+}
+
+export default {getAll, create, remove, getById, openInscriptions, closeInscriptions, startTournament}
