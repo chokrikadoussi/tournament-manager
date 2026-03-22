@@ -4,4 +4,12 @@ const getAll = () => {
   return api.get('/tournaments');
 }
 
-export default {getAll}
+const create = (data) => {
+  return api.post('/tournaments', data);
+}
+
+const remove = (id) => {
+  return api.delete(`/tournaments/${id}`);
+}
+
+export default {getAll, create, remove}
