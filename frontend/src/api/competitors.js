@@ -4,4 +4,8 @@ const getAll = () => {
   return api.get('/competitors');
 }
 
-export default {getAll}
+const create = (data) => {
+  return api.post('/competitors', data);
+}
+
+export default {getAll, create}
