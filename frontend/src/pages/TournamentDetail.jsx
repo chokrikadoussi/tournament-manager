@@ -2,6 +2,7 @@ import {useParams} from "react-router-dom";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import tournamentsApi from "@/api/tournaments.js";
 import registrationsApi from "@/api/registrations.js";
+import competitorsApi from "@/api/competitors.js";
 import {queryClient} from "@/main.jsx";
 import {useState} from "react";
 
@@ -20,8 +21,15 @@ const TournamentDetail = () => {
     queryFn: () => registrationsApi.getAll(tournamentId),
   });
 
+  const getCompetitors = useQuery({
+    queryKey: ['competitors'],
+    queryFn: () => competitorsApi.getAll({limit: 50}),
+  });
+
   const tournament = getTournament.data;
   const registrations = getRegistrations.data || [];
+  const competitors = getCompetitors.data?.data || [];
+  const competitorsNotInTournament = competitors.filter(c => !registrations.some(r => r.competitor.id === c.id));
 
   const competitorLabel = {
     'PLAYER': 'Joueur',
@@ -60,6 +68,28 @@ const TournamentDetail = () => {
     }
   });
 
+  const registerMutation = useMutation({
+    mutationFn: ({tournamentId, competitorId}) => registrationsApi.register(tournamentId, competitorId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'registrations']});
+    },
+    onError: (error) => {
+      setErrorMsg(error.error || 'An error occurred');
+      setTimeout(() => setErrorMsg(''), 5000);
+    }
+  });
+
+  const unregisterMutation = useMutation({
+    mutationFn: ({tournamentId, competitorId}) => registrationsApi.unregister(tournamentId, competitorId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'registrations']});
+    },
+    onError: (error) => {
+      setErrorMsg(error.error || 'An error occurred');
+      setTimeout(() => setErrorMsg(''), 5000);
+    }
+  });
+
   // ---------
   // HANDLERS
   // ---------
@@ -76,6 +106,18 @@ const TournamentDetail = () => {
   const handleStartTournament = () => {
     if (window.confirm(`Starting the tournament will generate the bracket and you won't be able to add more competitors. Are you sure?`)) {
       startTournamentMutation.mutate(tournamentId);
+    }
+  }
+
+  const handleCompetitorRegistration = (e) => {
+    e.preventDefault();
+    const competitorId = e.target.elements["competitorId"].value;
+    registerMutation.mutate({tournamentId, competitorId});
+  }
+
+  const handleCompetitorUnregister = (competitor) => {
+    if (window.confirm(`Are you sure you want to unregister ${competitor.name} from this tournament?`)) {
+      unregisterMutation.mutate({tournamentId, competitorId: competitor.id});
     }
   }
 
@@ -104,6 +146,20 @@ const TournamentDetail = () => {
           {registrations.length >= 2 && <button onClick={handleStartTournament}>Démarrer le tournoi</button>}
         </>
       }
+      <h2>Add a new competitor</h2>
+      {competitorsNotInTournament.length === 0 ?
+        <p>No competitors found. Please add some competitors before registering them to the tournament.</p>
+        : (
+          <form onSubmit={handleCompetitorRegistration}>
+            <select name="competitorId">
+              {competitorsNotInTournament.map((competitor) => (
+                <option key={competitor.id}
+                        value={competitor.id}>{competitor.name} ({competitorLabel[competitor.type]})</option>
+              ))}
+            </select>
+            <button type="submit">Inscrire</button>
+          </form>
+        )}
       <h2>List of Registrations</h2>
       {registrations.length === 0 ? (
         <p>No registrations found.</p>
@@ -115,6 +171,7 @@ const TournamentDetail = () => {
             <th>Type</th>
             <th>Seed</th>
             <th>Enregistré le</th>
+            <th>Actions</th>
           </tr>
           </thead>
           <tbody>
@@ -124,6 +181,9 @@ const TournamentDetail = () => {
               <td>{competitorLabel[reg.competitor.type]}</td>
               <td>{reg.seed || "Non classé"}</td>
               <td>{reg.createdAt}</td>
+              <td>
+                <button onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</button>
+              </td>
             </tr>
           ))}
           </tbody>
