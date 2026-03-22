@@ -90,6 +90,18 @@ const TournamentDetail = () => {
     }
   });
 
+  const setSeedMutation = useMutation({
+    mutationFn: ({competitorId, seed}) =>
+      registrationsApi.setSeed(tournamentId, competitorId, seed),
+    onSuccess: () => queryClient.invalidateQueries({
+      queryKey: ['tournament', tournamentId, 'registrations']
+    }),
+    onError: (error) => {
+      setErrorMsg(error.error || 'An error occurred');
+      setTimeout(() => setErrorMsg(''), 5000);
+    }
+  });
+
   // ---------
   // HANDLERS
   // ---------
@@ -119,6 +131,14 @@ const TournamentDetail = () => {
     if (window.confirm(`Are you sure you want to unregister ${competitor.name} from this tournament?`)) {
       unregisterMutation.mutate({tournamentId, competitorId: competitor.id});
     }
+  }
+
+  const handleSeedChange = (e, competitorId) => {
+    const val = e.target.value;
+    setSeedMutation.mutate({
+      competitorId,
+      seed: val ? parseInt(val) : null,
+    });
   }
 
   if (getTournament.isLoading) {
@@ -176,16 +196,23 @@ const TournamentDetail = () => {
           </thead>
           <tbody>
           {registrations.map((reg) => (
-            <tr key={reg.id}>
-              <td>{reg.competitor.name}</td>
-              <td>{competitorLabel[reg.competitor.type]}</td>
-              <td>{reg.seed || "Non classé"}</td>
-              <td>{reg.createdAt}</td>
-              <td>
-                <button onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</button>
-              </td>
-            </tr>
-          ))}
+              <tr key={reg.id}>
+                <td>{reg.competitor.name}</td>
+                <td>{competitorLabel[reg.competitor.type]}</td>
+                <td>
+                  <input
+                    type="number"
+                    defaultValue={reg.seed || ''}
+                    onBlur={(e) => handleSeedChange(e, reg.competitor.id)}
+                  />
+                </td>
+                <td>{reg.createdAt}</td>
+                <td>
+                  <button onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</button>
+                </td>
+              </tr>
+            )
+          )}
           </tbody>
         </table>
       )}

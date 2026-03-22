@@ -12,4 +12,8 @@ const unregister = (tournamentId, competitorId) => {
   return api.delete(`/tournaments/${tournamentId}/registrations/${competitorId}`);
 };
 
-export default {getAll, register, unregister};
+const setSeed = (tournamentId, competitorId, seed) => {
+  return api.patch(`/tournaments/${tournamentId}/registrations/${competitorId}`, {seed});
+}
+
+export default {getAll, register, unregister, setSeed};
