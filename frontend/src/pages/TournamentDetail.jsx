@@ -3,6 +3,7 @@ import {useMutation, useQuery} from "@tanstack/react-query";
 import tournamentsApi from "@/api/tournaments.js";
 import registrationsApi from "@/api/registrations.js";
 import competitorsApi from "@/api/competitors.js";
+import bracketApi from "@/api/bracket.js";
 import {queryClient} from "@/main.jsx";
 import {useState} from "react";
 
@@ -16,6 +17,8 @@ const TournamentDetail = () => {
     queryFn: () => tournamentsApi.getById(tournamentId),
   });
 
+  const tournament = getTournament.data;
+
   const getRegistrations = useQuery({
     queryKey: ['tournament', tournamentId, 'registrations'],
     queryFn: () => registrationsApi.getAll(tournamentId),
@@ -26,14 +29,28 @@ const TournamentDetail = () => {
     queryFn: () => competitorsApi.getAll({limit: 50}),
   });
 
-  const tournament = getTournament.data;
+  const getBracket = useQuery({
+    queryKey: ['tournament', tournamentId, 'bracket'],
+    queryFn: () => bracketApi.getBracket(tournamentId),
+    enabled: ["IN_PROGRESS", "COMPLETED"].includes(tournament?.status),
+  });
+
+
   const registrations = getRegistrations.data || [];
   const competitors = getCompetitors.data?.data || [];
   const competitorsNotInTournament = competitors.filter(c => !registrations.some(r => r.competitor.id === c.id));
+  const bracket = ["IN_PROGRESS", "COMPLETED"].includes(tournament?.status) ? getBracket.data : null;
 
   const competitorLabel = {
     'PLAYER': 'Joueur',
     'TEAM': 'Équipe',
+  }
+
+  const bracketMap = new Map(); // Map<round: number, matches: array>
+  if (bracket?.rounds) {
+    bracket.rounds.forEach(({round, matches}) => {
+      bracketMap.set(round, matches);
+    });
   }
 
   // ---------
@@ -216,6 +233,24 @@ const TournamentDetail = () => {
           </tbody>
         </table>
       )}
+      <h2>Visual</h2>
+      <div style={{display: 'flex', gap: '2rem'}}>
+        {[...bracketMap.entries()].map(([round, matches]) => (
+          <div key={round}>
+            <h3>Round {round}</h3>
+            {matches.map((match) => (
+              <div key={match.id} style={{border: '1px solid black', margin: '0.5rem', padding: '0.5rem'}}>
+                {match.participants.map((p) => (
+                  <div key={p.slot}
+                       style={{fontWeight: match.winnerId === p.competitorId ? 'bold' : 'normal'}}>
+                    {p.competitor?.name ?? 'BYE'}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
