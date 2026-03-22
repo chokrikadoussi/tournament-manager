@@ -1,6 +1,7 @@
 import {useParams} from "react-router-dom";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import tournamentsApi from "@/api/tournaments.js";
+import registrationsApi from "@/api/registrations.js";
 import {queryClient} from "@/main.jsx";
 import {useState} from "react";
 
@@ -14,8 +15,22 @@ const TournamentDetail = () => {
     queryFn: () => tournamentsApi.getById(tournamentId),
   });
 
-  const tournament = getTournament.data;
+  const getRegistrations = useQuery({
+    queryKey: ['tournament', tournamentId, 'registrations'],
+    queryFn: () => registrationsApi.getAll(tournamentId),
+  });
 
+  const tournament = getTournament.data;
+  const registrations = getRegistrations.data || [];
+
+  const competitorLabel = {
+    'PLAYER': 'Joueur',
+    'TEAM': 'Équipe',
+  }
+
+  // ---------
+  // MUTATIONS
+  // ---------
   const openInscriptionsMutation = useMutation({
     mutationFn: (id) => tournamentsApi.openInscriptions(id),
     onSuccess: () => {
@@ -45,6 +60,9 @@ const TournamentDetail = () => {
     }
   });
 
+  // ---------
+  // HANDLERS
+  // ---------
   const handleInscriptions = (action) => {
     if (window.confirm(`Are you sure you want to ${action} inscriptions?`)) {
       if (action === 'open') {
@@ -77,15 +95,40 @@ const TournamentDetail = () => {
       {tournament.status === 'DRAFT' &&
         <>
           <button onClick={() => handleInscriptions("open")}>Ouvrir les inscriptions</button>
-          <button onClick={handleStartTournament}>Démarrer le tournoi</button>
+          {registrations.length >= 2 && <button onClick={handleStartTournament}>Démarrer le tournoi</button>}
         </>
       }
       {tournament.status === 'OPEN' &&
         <>
           <button onClick={() => handleInscriptions("close")}>Cloturer les inscriptions</button>
-          <button onClick={handleStartTournament}>Démarrer le tournoi</button>
+          {registrations.length >= 2 && <button onClick={handleStartTournament}>Démarrer le tournoi</button>}
         </>
       }
+      <h2>List of Registrations</h2>
+      {registrations.length === 0 ? (
+        <p>No registrations found.</p>
+      ) : (
+        <table>
+          <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Seed</th>
+            <th>Enregistré le</th>
+          </tr>
+          </thead>
+          <tbody>
+          {registrations.map((reg) => (
+            <tr key={reg.id}>
+              <td>{reg.competitor.name}</td>
+              <td>{competitorLabel[reg.competitor.type]}</td>
+              <td>{reg.seed || "Non classé"}</td>
+              <td>{reg.createdAt}</td>
+            </tr>
+          ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
