@@ -8,4 +8,8 @@ const create = (data) => {
   return api.post('/competitors', data);
 }
 
-export default {getAll, create}
+const remove = (id) => {
+  return api.delete(`/competitors/${id}`);
+}
+
+export default {getAll, create, remove}

@@ -18,7 +18,7 @@ const Competitors = () => {
   const getCompetitors = useQuery({
     queryKey: ['competitors'],
     queryFn: competitorsApi.getAll,
-  });
+  })
 
   const createMutation = useMutation({
     mutationFn: (data) => competitorsApi.create(data),
@@ -28,9 +28,22 @@ const Competitors = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => competitorsApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competitors'] });
+    },
+  })
+
   const handleCreateCompetitor = (e) => {
     e.preventDefault();
     createMutation.mutate(formData);
+  }
+
+  const handleDeleteCompetitor = (id) => {
+    if (window.confirm(`Are you sure you want to delete competitor?`)) {
+      deleteMutation.mutate(id);
+    }
   }
 
   const competitors = getCompetitors.data?.data || [];
@@ -70,24 +83,29 @@ const Competitors = () => {
       {competitors.length === 0 ? (
         <p>No competitors found.</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Créé le</th>
+      <table>
+        <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Créé le</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {competitors.map((competitor) => (
+            <tr key={competitor.id}>
+              <td>{competitor.name}</td>
+              <td>{competitorLabel[competitor.type]}</td>
+              <td>{competitor.createdAt}</td>
+              <td>
+                <button onClick={() => handleDeleteCompetitor(competitor.id)}>Supprimer</button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {competitors.map((competitor) => (
-              <tr key={competitor.id}>
-                <td>{competitor.name}</td>
-                <td>{competitorLabel[competitor.type]}</td>
-                <td>{competitor.createdAt}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          )
+        )}
+        </tbody>
+      </table>
       )}
     </div>
   );
