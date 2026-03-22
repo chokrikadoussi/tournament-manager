@@ -6,6 +6,7 @@ import {useState} from "react";
 const Competitors = () => {
 
   const [open, setOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     type: 'PLAYER',
@@ -25,6 +26,10 @@ const Competitors = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['competitors'] });
       clearData();
+    },
+    onError: (error) => {
+      setErrorMsg(error.error || 'An error occurred');
+      setTimeout(() => setErrorMsg(''), 5000);
     },
   });
 
@@ -64,6 +69,7 @@ const Competitors = () => {
   return (
     <div>
       <h1>Competitors</h1>
+      {errorMsg && <p style={{color: 'red'}}>{errorMsg}</p>}
       <button onClick={() => setOpen(true)}>Add a competitor</button>
       {open && (
         <form onSubmit={handleCreateCompetitor}>
