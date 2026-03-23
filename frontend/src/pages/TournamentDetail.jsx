@@ -88,7 +88,7 @@ const TournamentDetail = () => {
 
   const getCompetitors = useQuery({
     queryKey: ['competitors'],
-    queryFn: () => competitorsApi.getAll({limit: 50}),
+    queryFn: () => competitorsApi.getAll({limit: 100}),
   });
 
   const getBracket = useQuery({
@@ -247,6 +247,14 @@ const TournamentDetail = () => {
     return <p>Error: {getTournament.error?.message || String(getTournament.error)}</p>;
   }
 
+  if (getBracket.isError) {
+    toastError(getBracket.error?.message || 'Une erreur est survenue lors du chargement du bracket');
+  }
+
+  if (getBracketRound.isError) {
+    toastError(getBracketRound.error?.message || 'Une erreur est survenue lors du chargement des matchs du round');
+  }
+
   return (
     <div className="tournament-detail">
       {tournament && <Breadcrumb className="text-sm text-muted-foreground mb-4">
@@ -274,10 +282,12 @@ const TournamentDetail = () => {
       )}
       {tournament.status === 'DRAFT' &&
         <>
-          <Button onClick={() => handleInscriptions("open")}>Ouvrir les inscriptions</Button>
+          <Button onClick={() => handleInscriptions("open")} disabled={openInscriptionsMutation.isPending}>
+            Ouvrir les inscriptions
+          </Button>
           {registrations.length >= 2 &&
             <ConfirmActionDialog
-              trigger={<Button>Démarrer le tournoi</Button>}
+              trigger={<Button disabled={startTournamentMutation.isPending}>Démarrer le tournoi</Button>}
               title="Démarrer le tournoi ?"
               description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
               confirmLabel="Démarrer"
@@ -288,10 +298,12 @@ const TournamentDetail = () => {
       }
       {tournament.status === 'OPEN' &&
         <>
-          <Button onClick={() => handleInscriptions("close")}>Cloturer les inscriptions</Button>
+          <Button onClick={() => handleInscriptions("close")} disabled={closeInscriptionsMutation.isPending}>
+            Cloturer les inscriptions
+          </Button>
           {registrations.length >= 2 &&
             <ConfirmActionDialog
-              trigger={<Button>Démarrer le tournoi</Button>}
+              trigger={<Button disabled={startTournamentMutation.isPending}>Démarrer le tournoi</Button>}
               title="Démarrer le tournoi ?"
               description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
               confirmLabel="Démarrer"
@@ -335,9 +347,9 @@ const TournamentDetail = () => {
           </Card>
         </>
       )}
-      <h2>List of Registrations</h2>
+      <h2>Liste des compétiteurs inscrits</h2>
       {registrations.length === 0 ? (
-        <p>No registrations found.</p>
+        <p>Aucune inscription trouvée.</p>
       ) : (
         <Table>
           <TableHeader>
