@@ -120,6 +120,7 @@ const TournamentDetail = () => {
     mutationFn: ({tournamentId, competitorId}) => registrationsApi.register(tournamentId, competitorId),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'registrations']});
+      setSelectedCompetitorId('');
       toastSuccess("Compétiteur inscrit");
     },
     onError: (error) => {
@@ -243,15 +244,15 @@ const TournamentDetail = () => {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Add a new competitor</CardTitle>
+              <CardTitle>Inscrire un combattant</CardTitle>
             </CardHeader>
             {competitorsNotInTournament.length === 0 ?
-              <p>No competitors found. Please add some competitors before registering them to the tournament.</p>
+              <p>Aucun combattant disponible. Ajoutez des compétiteurs avant de les inscrire au tournoi.</p>
               : (
                 <form onSubmit={handleCompetitorRegistration}>
                   <Select value={selectedCompetitorId} onValueChange={setSelectedCompetitorId}>
                     <SelectTrigger>
-                      <SelectValue placeholder='Select a competitor'/>
+                      <SelectValue placeholder='Choisir un combattant...'/>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
@@ -268,7 +269,7 @@ const TournamentDetail = () => {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <Button type="submit">Inscrire</Button>
+                  <Button type="submit" disabled={!selectedCompetitorId}>Inscrire</Button>
                 </form>
               )}
           </Card>
@@ -294,7 +295,7 @@ const TournamentDetail = () => {
                   <TableCell>{reg.competitor.name}</TableCell>
                   <TableCell><CompetitorTypeBadge type={reg.competitor.type}/></TableCell>
                   <TableCell>
-                    <Input type="number" defaultValue={reg.seed || ''}
+                    <Input key={reg.id + '-' + (reg.seed ?? 'null')} type="number" defaultValue={reg.seed || ''}
                            onBlur={(e) => handleSeedChange(e, reg.competitor.id)}/>
                   </TableCell>
                   <TableCell>{reg.createdAt}</TableCell>
