@@ -25,6 +25,7 @@ import {
   SelectValue
 } from "@/components/ui/select.jsx";
 import {toastSuccess, toastError} from "@/lib/toast.js";
+import BracketView from "@/components/BracketView.jsx";
 
 const TournamentDetail = () => {
 
@@ -379,31 +380,7 @@ const TournamentDetail = () => {
             </Card>
           )}
           <h2>Vue d'ensemble</h2>
-          <div className="flex gap-8 overflow-x-auto">
-            {[...bracketMap.entries()].map(([round, matches]) => (
-              <div key={round} className="flex flex-col gap-2">
-                <h3 className="font-semibold">Round {round}</h3>
-                {matches.map((match) => (
-                  <Card key={match.id} className="w-48">
-                    <CardContent className="p-3 flex flex-col gap-1">
-                      {[0, 1].map((slot) => {
-                        const p = match.participants[slot];
-                        const name = p?.competitor?.name ?? (p ? 'BYE' : 'TBD');
-                        return (
-                          <div
-                            key={slot}
-                            className={match.winnerId === p?.competitorId ? 'font-bold' : 'text-muted-foreground'}
-                          >
-                            {name}
-                          </div>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ))}
-          </div>
+          <BracketView bracketMap={bracketMap} totalRounds={bracket?.totalRounds}/>
         </>
       )}
     </div>
