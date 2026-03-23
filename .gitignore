@@ -12,3 +12,5 @@ frontend/dist
 frontend/.env
 frontend/*.log
 frontend/coverage
+
+.worktrees
