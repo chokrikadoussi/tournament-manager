@@ -23,8 +23,8 @@ import {Field, FieldGroup} from "@/components/ui/field.jsx";
 import {Label} from "@/components/ui/label.jsx";
 import {Input} from "@/components/ui/input.jsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
-import {Skeleton} from "@/components/ui/skeleton.jsx";
 import ErrorMessage from "@/components/ErrorMessage.jsx";
+import TableSkeleton from "@/components/TableSkeleton.jsx";
 import CompetitorTypeBadge from "@/components/CompetitorTypeBadge.jsx";
 import {
   AlertDialog, AlertDialogCancel,
@@ -83,18 +83,7 @@ const Competitors = () => {
   const competitors = getCompetitors.data?.data || [];
 
   if (getCompetitors.isLoading) {
-    return (
-      <div className="flex w-full max-w-sm flex-col gap-2">
-        {Array.from({length: 5}).map((_, index) => (
-          <div className="flex gap-4" key={index}>
-            <Skeleton className="h-4 flex-1"/>
-            <Skeleton className="h-4 w-24"/>
-            <Skeleton className="h-4 w-20"/>
-            <Skeleton className="h-4 w-20"/>
-          </div>
-        ))}
-      </div>
-    );
+    return <TableSkeleton/>;
   }
 
   if (getCompetitors.isError) {
