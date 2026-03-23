@@ -4,6 +4,7 @@ import tournamentsApi from "@/api/tournaments.js";
 import registrationsApi from "@/api/registrations.js";
 import competitorsApi from "@/api/competitors.js";
 import bracketApi from "@/api/bracket.js";
+import matchesApi from "@/api/matches.js";
 import {queryClient} from "@/main.jsx";
 import {useState} from "react";
 
@@ -11,6 +12,7 @@ const TournamentDetail = () => {
 
   const tournamentId = useParams().id;
   const [errorMsg, setErrorMsg] = useState('');
+  const [currentRound, setCurrentRound] = useState(1);
 
   const getTournament = useQuery({
     queryKey: ['tournament', tournamentId],
@@ -35,11 +37,17 @@ const TournamentDetail = () => {
     enabled: ["IN_PROGRESS", "COMPLETED"].includes(tournament?.status),
   });
 
+  const getBracketRound = useQuery({
+    queryKey: ['matches', tournamentId, currentRound],
+    queryFn: () => matchesApi.getByTournament(tournamentId, currentRound),
+    enabled: ["IN_PROGRESS", "COMPLETED"].includes(tournament?.status),
+  })
 
   const registrations = getRegistrations.data || [];
   const competitors = getCompetitors.data?.data || [];
   const competitorsNotInTournament = competitors.filter(c => !registrations.some(r => r.competitor.id === c.id));
   const bracket = ["IN_PROGRESS", "COMPLETED"].includes(tournament?.status) ? getBracket.data : null;
+  const currentRoundMatches = getBracketRound.data || [];
 
   const competitorLabel = {
     'PLAYER': 'Joueur',
@@ -234,6 +242,37 @@ const TournamentDetail = () => {
         </table>
       )}
       <h2>Visual</h2>
+      {Array.from({length: bracketMap.size}).map((_, i) => (
+        <button key={i} onClick={() => setCurrentRound(i + 1)}
+                style={{fontWeight: currentRound === i + 1 ? 'bold' : 'normal'}}>
+          Round {i + 1}
+        </button>
+      ))}
+      {currentRoundMatches.length === 0 ? (
+        <p>No matches for this round.</p>
+      ) : (
+        <table>
+          <thead>
+          <tr>
+            <th>Status</th>
+            <th>Participant 1</th>
+            <th>Participant 2</th>
+            <th>Winner</th>
+          </tr>
+          </thead>
+          <tbody>
+          {currentRoundMatches.map((match) => (
+            <tr key={match.id}>
+              <td>{match.status}</td>
+              <td>{match.participants[0]?.competitor?.name || '-'}</td>
+              <td>{match.participants[1]?.competitor?.name || '-'}</td>
+              <td>{match.winnerId ? match.participants.find(p => p.competitorId === match.winnerId)?.competitor?.name : '-'}</td>
+            </tr>
+          ))}
+          </tbody>
+        </table>
+      )}
+      <h2>Every round</h2>
       <div style={{display: 'flex', gap: '2rem'}}>
         {[...bracketMap.entries()].map(([round, matches]) => (
           <div key={round}>
