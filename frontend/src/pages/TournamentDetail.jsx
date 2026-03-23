@@ -11,7 +11,6 @@ import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/c
 import ConfirmActionDialog from "@/components/ConfirmActionDialog.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Input} from "@/components/ui/input.jsx";
-import ErrorMessage from "@/components/ErrorMessage.jsx";
 import TableSkeleton from "@/components/TableSkeleton.jsx";
 import CompetitorTypeBadge from "@/components/CompetitorTypeBadge.jsx";
 import TournamentStatusBadge from "@/components/TournamentStatusBadge.jsx";
@@ -25,11 +24,11 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select.jsx";
+import {toastSuccess, toastError} from "@/lib/toast.js";
 
 const TournamentDetail = () => {
 
   const tournamentId = useParams().id;
-  const [errorMsg, setErrorMsg] = useState('');
   const [currentRound, setCurrentRound] = useState(1);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [selectedCompetitorId, setSelectedCompetitorId] = useState('');
@@ -88,6 +87,10 @@ const TournamentDetail = () => {
     mutationFn: (id) => tournamentsApi.openInscriptions(id),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
+      toastSuccess("Inscriptions ouvertes");
+    },
+    onError: (error) => {
+      toastError(error.error || 'Une erreur est survenue lors de l\'ouverture des inscriptions');
     }
   });
 
@@ -95,10 +98,10 @@ const TournamentDetail = () => {
     mutationFn: (id) => tournamentsApi.closeInscriptions(id),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
+      toastSuccess("Inscriptions clôturées");
     },
     onError: (error) => {
-      setErrorMsg(error.error || 'An error occurred');
-      setTimeout(() => setErrorMsg(''), 5000);
+      toastError(error.error || 'Une erreur est survenue lors de la clôture des inscriptions');
     }
   });
 
@@ -106,10 +109,10 @@ const TournamentDetail = () => {
     mutationFn: (id) => tournamentsApi.startTournament(id),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
+      toastSuccess("Tournoi démarré");
     },
     onError: (error) => {
-      setErrorMsg(error.error || 'An error occurred');
-      setTimeout(() => setErrorMsg(''), 5000);
+      toastError(error.error || 'Une erreur est survenue lors du démarrage du tournoi');
     }
   });
 
@@ -117,10 +120,10 @@ const TournamentDetail = () => {
     mutationFn: ({tournamentId, competitorId}) => registrationsApi.register(tournamentId, competitorId),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'registrations']});
+      toastSuccess("Compétiteur inscrit");
     },
     onError: (error) => {
-      setErrorMsg(error.error || 'An error occurred');
-      setTimeout(() => setErrorMsg(''), 5000);
+      toastError(error.error || 'Une erreur est survenue lors de l\'inscription du compétiteur');
     }
   });
 
@@ -128,10 +131,10 @@ const TournamentDetail = () => {
     mutationFn: ({tournamentId, competitorId}) => registrationsApi.unregister(tournamentId, competitorId),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'registrations']});
+      toastSuccess("Compétiteur désinscrit");
     },
     onError: (error) => {
-      setErrorMsg(error.error || 'An error occurred');
-      setTimeout(() => setErrorMsg(''), 5000);
+      toastError(error.error || 'Une erreur est survenue lors de la désinscription du compétiteur');
     }
   });
 
@@ -142,22 +145,22 @@ const TournamentDetail = () => {
       queryClient.invalidateQueries({queryKey: ['matches', tournamentId, currentRound]});
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'bracket']});
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
+      toastSuccess("Résultat enregistré");
     },
     onError: (error) => {
-      setErrorMsg(error.error || 'An error occurred');
-      setTimeout(() => setErrorMsg(''), 5000);
+      toastError(error.error || 'Une erreur est survenue lors de l\'enregistrement du résultat');
     }
   });
 
   const setSeedMutation = useMutation({
     mutationFn: ({competitorId, seed}) =>
       registrationsApi.setSeed(tournamentId, competitorId, seed),
-    onSuccess: () => queryClient.invalidateQueries({
-      queryKey: ['tournament', tournamentId, 'registrations']
-    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'registrations']});
+      toastSuccess("Classement mis à jour");
+    },
     onError: (error) => {
-      setErrorMsg(error.error || 'An error occurred');
-      setTimeout(() => setErrorMsg(''), 5000);
+      toastError(error.error || 'Une erreur est survenue lors de la mise à jour du classement');
     }
   });
 
@@ -204,7 +207,6 @@ const TournamentDetail = () => {
   return (
     <div className="tournament-detail">
       <h1>{tournament.name}</h1>
-      <ErrorMessage message={errorMsg}/>
       <p>Statut : <TournamentStatusBadge status={tournament.status}/></p>
       {tournament.status === 'COMPLETED' && champion && (
         <p><strong>Champion : {champion}</strong></p>
@@ -292,7 +294,8 @@ const TournamentDetail = () => {
                   <TableCell>{reg.competitor.name}</TableCell>
                   <TableCell><CompetitorTypeBadge type={reg.competitor.type}/></TableCell>
                   <TableCell>
-                    <Input type="number" defaultValue={reg.seed || ''} onBlur={(e) => handleSeedChange(e, reg.competitor.id)}/>
+                    <Input type="number" defaultValue={reg.seed || ''}
+                           onBlur={(e) => handleSeedChange(e, reg.competitor.id)}/>
                   </TableCell>
                   <TableCell>{reg.createdAt}</TableCell>
                   <TableCell>
