@@ -97,6 +97,12 @@ const Home = () => {
             </Card>
           </Link>
         </div>
+        <div className="flex justify-center">
+          <Button asChild size="lg" className="w-full">
+            <Link to="/tournaments"><Plus className="mr-2 h-4 w-4"/> Créer un tournoi</Link>
+          </Button>
+        </div>
+
       </div>
     </div>
   );
