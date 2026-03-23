@@ -270,72 +270,76 @@ const TournamentDetail = () => {
           </tbody>
         </table>
       )}
-      <h2>Visual</h2>
-      {Array.from({length: bracketMap.size}).map((_, i) => (
-        <button key={i} onClick={() => setCurrentRound(i + 1)}
-                style={{fontWeight: currentRound === i + 1 ? 'bold' : 'normal'}}>
-          Round {i + 1}
-        </button>
-      ))}
-      {currentRoundMatches.length === 0 ? (
-        <p>No matches for this round.</p>
-      ) : (
-        <table>
-          <thead>
-          <tr>
-            <th>Status</th>
-            <th>Participant 1</th>
-            <th>Participant 2</th>
-            <th>Winner</th>
-            <th>Actions</th>
-          </tr>
-          </thead>
-          <tbody>
-          {currentRoundMatches.map((match) => (
-            <tr key={match.id}>
-              <td>{match.status}</td>
-              <td>{match.participants[0]?.competitor?.name || '-'}</td>
-              <td>{match.participants[1]?.competitor?.name || '-'}</td>
-              <td>{match.winnerId ? match.participants.find(p => p.competitorId === match.winnerId)?.competitor?.name : '-'}</td>
-              <td>
-                {match.status === 'READY' && (
-                  <button onClick={() => setSelectedMatch(match)}>Saisir résultat</button>
-                )}
-              </td>
-            </tr>
-          ))}
-          </tbody>
-        </table>
-      )}
-      {selectedMatch && (
-        <div>
-          <p>Sélectionner le vainqueur :</p>
-          {selectedMatch.participants.filter(p => p.competitor).map(p => (
-            <button key={p.slot} onClick={() => recordResultMutation.mutate({matchId: selectedMatch.id, winnerId: p.competitorId})}>
-              {p.competitor.name}
+      {['IN_PROGRESS', 'COMPLETED'].includes(tournament.status) && (
+        <>
+          <h2>Visual</h2>
+          {Array.from({length: bracketMap.size}).map((_, i) => (
+            <button key={i} onClick={() => setCurrentRound(i + 1)}
+                    style={{fontWeight: currentRound === i + 1 ? 'bold' : 'normal'}}>
+              Round {i + 1}
             </button>
           ))}
-          <button onClick={() => setSelectedMatch(null)}>Annuler</button>
-        </div>
-      )}
-      <h2>Every round</h2>
-      <div style={{display: 'flex', gap: '2rem'}}>
-        {[...bracketMap.entries()].map(([round, matches]) => (
-          <div key={round}>
-            <h3>Round {round}</h3>
-            {matches.map((match) => (
-              <div key={match.id} style={{border: '1px solid black', margin: '0.5rem', padding: '0.5rem'}}>
-                {match.participants.map((p) => (
-                  <div key={p.slot}
-                       style={{fontWeight: match.winnerId === p.competitorId ? 'bold' : 'normal'}}>
-                    {p.competitor?.name ?? 'BYE'}
+          {currentRoundMatches.length === 0 ? (
+            <p>No matches for this round.</p>
+          ) : (
+            <table>
+              <thead>
+              <tr>
+                <th>Status</th>
+                <th>Participant 1</th>
+                <th>Participant 2</th>
+                <th>Winner</th>
+                <th>Actions</th>
+              </tr>
+              </thead>
+              <tbody>
+              {currentRoundMatches.map((match) => (
+                <tr key={match.id}>
+                  <td>{match.status}</td>
+                  <td>{match.participants[0]?.competitor?.name || '-'}</td>
+                  <td>{match.participants[1]?.competitor?.name || '-'}</td>
+                  <td>{match.winnerId ? match.participants.find(p => p.competitorId === match.winnerId)?.competitor?.name : '-'}</td>
+                  <td>
+                    {match.status === 'READY' && (
+                      <button onClick={() => setSelectedMatch(match)}>Saisir résultat</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              </tbody>
+            </table>
+          )}
+          {selectedMatch && (
+            <div>
+              <p>Sélectionner le vainqueur :</p>
+              {selectedMatch.participants.filter(p => p.competitor).map(p => (
+                <button key={p.slot} onClick={() => recordResultMutation.mutate({matchId: selectedMatch.id, winnerId: p.competitorId})}>
+                  {p.competitor.name}
+                </button>
+              ))}
+              <button onClick={() => setSelectedMatch(null)}>Annuler</button>
+            </div>
+          )}
+          <h2>Every round</h2>
+          <div style={{display: 'flex', gap: '2rem'}}>
+            {[...bracketMap.entries()].map(([round, matches]) => (
+              <div key={round}>
+                <h3>Round {round}</h3>
+                {matches.map((match) => (
+                  <div key={match.id} style={{border: '1px solid black', margin: '0.5rem', padding: '0.5rem'}}>
+                    {match.participants.map((p) => (
+                      <div key={p.slot}
+                           style={{fontWeight: match.winnerId === p.competitorId ? 'bold' : 'normal'}}>
+                        {p.competitor?.name ?? 'BYE'}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
             ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   );
 }
