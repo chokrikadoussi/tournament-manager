@@ -19,10 +19,10 @@ import {Label} from "@/components/ui/label.jsx";
 import {Input} from "@/components/ui/input.jsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
 import {Skeleton} from "@/components/ui/skeleton.jsx";
-import ErrorMessage from "@/components/ErrorMessage.jsx";
 import TournamentStatusBadge from "@/components/TournamentStatusBadge.jsx";
 import {Calendar, User, Trophy} from "lucide-react";
 import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group.jsx";
+import {toastError} from "@/lib/toast.js";
 
 const STATUS_LABELS = {
   ALL: 'Tous',
@@ -36,7 +36,6 @@ const Tournaments = () => {
 
   const [open, setOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     sport: '',
@@ -65,8 +64,7 @@ const Tournaments = () => {
       clearData();
     },
     onError: (error) => {
-      setErrorMsg(error.error || 'An error occurred');
-      setTimeout(() => setErrorMsg(''), 5000);
+      toastError(error.error || 'Une erreur est survenue lors de la création du tournoi');
     }
   });
 
@@ -110,7 +108,6 @@ const Tournaments = () => {
   return (
     <div>
       <h1>Tournaments</h1>
-      <ErrorMessage message={errorMsg}/>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
