@@ -7,6 +7,27 @@ import bracketApi from "@/api/bracket.js";
 import matchesApi from "@/api/matches.js";
 import {queryClient} from "@/main.jsx";
 import {useState} from "react";
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.jsx";
+import {
+  AlertDialog, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog.jsx";
+import {Button} from "@/components/ui/button.jsx";
+import {Input} from "@/components/ui/input.jsx";
+import {Skeleton} from "@/components/ui/skeleton.jsx";
+import {Card, CardHeader, CardTitle} from "@/components/ui/card.jsx";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select.jsx";
 
 const TournamentDetail = () => {
 
@@ -14,6 +35,7 @@ const TournamentDetail = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [currentRound, setCurrentRound] = useState(1);
   const [selectedMatch, setSelectedMatch] = useState(null);
+  const [selectedCompetitorId, setSelectedCompetitorId] = useState('');
 
   const getTournament = useQuery({
     queryKey: ['tournament', tournamentId],
@@ -151,31 +173,24 @@ const TournamentDetail = () => {
   // HANDLERS
   // ---------
   const handleInscriptions = (action) => {
-    if (window.confirm(`Are you sure you want to ${action} inscriptions?`)) {
-      if (action === 'open') {
-        openInscriptionsMutation.mutate(tournamentId);
-      } else if (action === 'close') {
-        closeInscriptionsMutation.mutate(tournamentId);
-      }
+    if (action === 'open') {
+      openInscriptionsMutation.mutate(tournamentId);
+    } else if (action === 'close') {
+      closeInscriptionsMutation.mutate(tournamentId);
     }
   }
 
   const handleStartTournament = () => {
-    if (window.confirm(`Starting the tournament will generate the bracket and you won't be able to add more competitors. Are you sure?`)) {
-      startTournamentMutation.mutate(tournamentId);
-    }
+    startTournamentMutation.mutate(tournamentId);
   }
 
   const handleCompetitorRegistration = (e) => {
     e.preventDefault();
-    const competitorId = e.target.elements["competitorId"].value;
-    registerMutation.mutate({tournamentId, competitorId});
+    registerMutation.mutate({tournamentId, competitorId: selectedCompetitorId});
   }
 
   const handleCompetitorUnregister = (competitor) => {
-    if (window.confirm(`Are you sure you want to unregister ${competitor.name} from this tournament?`)) {
-      unregisterMutation.mutate({tournamentId, competitorId: competitor.id});
-    }
+    unregisterMutation.mutate({tournamentId, competitorId: competitor.id});
   }
 
   const handleSeedChange = (e, competitorId) => {
@@ -187,7 +202,18 @@ const TournamentDetail = () => {
   }
 
   if (getTournament.isLoading) {
-    return <p>Loading...</p>;
+    return (
+      <div className="flex w-full max-w-sm flex-col gap-2">
+        {Array.from({length: 5}).map((_, index) => (
+          <div className="flex gap-4" key={index}>
+            <Skeleton className="h-4 flex-1"/>
+            <Skeleton className="h-4 w-24"/>
+            <Skeleton className="h-4 w-20"/>
+            <Skeleton className="h-4 w-20"/>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (getTournament.isError) {
@@ -204,71 +230,141 @@ const TournamentDetail = () => {
       )}
       {tournament.status === 'DRAFT' &&
         <>
-          <button onClick={() => handleInscriptions("open")}>Ouvrir les inscriptions</button>
-          {registrations.length >= 2 && <button onClick={handleStartTournament}>Démarrer le tournoi</button>}
+          <Button onClick={() => handleInscriptions("open")}>Ouvrir les inscriptions</Button>
+          {registrations.length >= 2 &&
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button>Démarrer le tournoi</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent size="sm">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Démarrer le tournoi ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently start the tournament and remove all associated data. This action cannot be
+                    undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel variant="outline">Annuler</AlertDialogCancel>
+                  <Button
+                    onClick={handleStartTournament}>Démarrer</Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          }
         </>
       }
       {tournament.status === 'OPEN' &&
         <>
-          <button onClick={() => handleInscriptions("close")}>Cloturer les inscriptions</button>
-          {registrations.length >= 2 && <button onClick={handleStartTournament}>Démarrer le tournoi</button>}
+          <Button onClick={() => handleInscriptions("close")}>Cloturer les inscriptions</Button>
+          {registrations.length >= 2 &&
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button>Démarrer le tournoi</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent size="sm">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Démarrer le tournoi ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently start the tournament and remove all associated data. This action cannot be
+                    undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel variant="outline">Annuler</AlertDialogCancel>
+                  <Button
+                    onClick={handleStartTournament}>Démarrer</Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          }
         </>
       }
       {tournament.status === 'OPEN' && (
         <>
-          <h2>Add a new competitor</h2>
-          {competitorsNotInTournament.length === 0 ?
-            <p>No competitors found. Please add some competitors before registering them to the tournament.</p>
-            : (
-              <form onSubmit={handleCompetitorRegistration}>
-                <select name="competitorId">
-                  {competitorsNotInTournament.map((competitor) => (
-                    <option key={competitor.id}
-                            value={competitor.id}>{competitor.name} ({competitorLabel[competitor.type]})</option>
-                  ))}
-                </select>
-                <button type="submit">Inscrire</button>
-              </form>
-            )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Add a new competitor</CardTitle>
+            </CardHeader>
+            {competitorsNotInTournament.length === 0 ?
+              <p>No competitors found. Please add some competitors before registering them to the tournament.</p>
+              : (
+                <form onSubmit={handleCompetitorRegistration}>
+                  <Select value={selectedCompetitorId} onValueChange={setSelectedCompetitorId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder='Select a competitor'/>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Joueur</SelectLabel>
+                        {competitorsNotInTournament.filter((c) => c.type === 'PLAYER').map((competitor) => (
+                          <SelectItem key={competitor.id} value={competitor.id}>{competitor.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Equipe</SelectLabel>
+                        {competitorsNotInTournament.filter((c) => c.type === 'TEAM').map((competitor) => (
+                          <SelectItem key={competitor.id} value={competitor.id}>{competitor.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <Button type="submit">Inscrire</Button>
+                </form>
+              )}
+          </Card>
         </>
       )}
       <h2>List of Registrations</h2>
       {registrations.length === 0 ? (
         <p>No registrations found.</p>
       ) : (
-        <table>
-          <thead>
-          <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Seed</th>
-            <th>Enregistré le</th>
-            <th>Actions</th>
-          </tr>
-          </thead>
-          <tbody>
-          {registrations.map((reg) => (
-              <tr key={reg.id}>
-                <td>{reg.competitor.name}</td>
-                <td>{competitorLabel[reg.competitor.type]}</td>
-                <td>
-                  <input
-                    type="number"
-                    defaultValue={reg.seed || ''}
-                    onBlur={(e) => handleSeedChange(e, reg.competitor.id)}
-                  />
-                </td>
-                <td>{reg.createdAt}</td>
-                <td>
-                  {tournament.status === 'OPEN' && (
-                    <button onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</button>
-                  )}
-                </td>
-              </tr>
-            )
-          )}
-          </tbody>
-        </table>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Classement</TableHead>
+              <TableHead>Enregistré le</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {registrations.map((reg) => (
+                <TableRow key={reg.id}>
+                  <TableCell>{reg.competitor.name}</TableCell>
+                  <TableCell>{competitorLabel[reg.competitor.type]}</TableCell>
+                  <TableCell>
+                    <Input type="number" defaultValue={reg.seed || ''} onBlur={(e) => handleSeedChange(e, reg.competitor.id)}/>
+                  </TableCell>
+                  <TableCell>{reg.createdAt}</TableCell>
+                  <TableCell>
+                    {tournament.status === 'OPEN' &&
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive">Désinscrire</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent size="sm">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Désinscrire le compétiteur ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently unregister this competitor from the tournament and remove all
+                              associated data. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel variant="outline">Annuler</AlertDialogCancel>
+                            <Button variant="destructive"
+                                    onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</Button>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>}
+                  </TableCell>
+                </TableRow>
+              )
+            )}
+          </TableBody>
+        </Table>
       )}
       {['IN_PROGRESS', 'COMPLETED'].includes(tournament.status) && (
         <>
@@ -313,7 +409,10 @@ const TournamentDetail = () => {
             <div>
               <p>Sélectionner le vainqueur :</p>
               {selectedMatch.participants.filter(p => p.competitor).map(p => (
-                <button key={p.slot} onClick={() => recordResultMutation.mutate({matchId: selectedMatch.id, winnerId: p.competitorId})}>
+                <button key={p.slot} onClick={() => recordResultMutation.mutate({
+                  matchId: selectedMatch.id,
+                  winnerId: p.competitorId
+                })}>
                   {p.competitor.name}
                 </button>
               ))}
