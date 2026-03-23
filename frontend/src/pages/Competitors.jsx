@@ -1,7 +1,7 @@
-import {useMutation, useQuery} from "@tanstack/react-query";
+import {useMutation, useQuery, keepPreviousData} from "@tanstack/react-query";
 import {queryClient} from "@/main.jsx";
 import competitorsApi from "@/api/competitors.js";
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import {
   Table,
   TableBody,
@@ -27,6 +27,8 @@ import ErrorMessage from "@/components/ErrorMessage.jsx";
 import TableSkeleton from "@/components/TableSkeleton.jsx";
 import CompetitorTypeBadge from "@/components/CompetitorTypeBadge.jsx";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog.jsx";
+import {Search} from "lucide-react";
+import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group.jsx";
 
 const Competitors = () => {
 
@@ -36,14 +38,27 @@ const Competitors = () => {
     name: '',
     type: 'PLAYER',
   });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const clearData = () => {
     setFormData({name: '', type: 'PLAYER'});
     setOpen(false);
   }
 
   const getCompetitors = useQuery({
-    queryKey: ['competitors'],
-    queryFn: competitorsApi.getAll,
+    queryKey: ['competitors', { search: debouncedSearch, type: filterType }],
+    queryFn: () => competitorsApi.getAll({
+      search: debouncedSearch || undefined,
+      type: filterType || undefined,
+    }),
+    placeholderData: keepPreviousData,
   })
 
   const createMutation = useMutation({
@@ -130,6 +145,22 @@ const Competitors = () => {
       </Dialog>
 
 
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true"/>
+          <Input name="search-term" className="pl-9" value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}/>
+        </div>
+        <ToggleGroup variant="outline" type="single" value={filterType} onValueChange={setFilterType}>
+          <ToggleGroupItem value="" aria-label="Toggle all">Tous</ToggleGroupItem>
+          <ToggleGroupItem value="PLAYER" aria-label="Toggle players">Joueurs</ToggleGroupItem>
+          <ToggleGroupItem value="TEAM" aria-label="Toggle teams">Equipes</ToggleGroupItem>
+        </ToggleGroup>
+        <span className="text-sm text-muted-foreground whitespace-nowrap">
+          {competitors.length} compétiteur{competitors.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
       {competitors.length === 0 ? (
         <p>No competitors found.</p>
       ) : (
@@ -144,23 +175,22 @@ const Competitors = () => {
           </TableHeader>
           <TableBody>
             {competitors.map((competitor) => (
-                <TableRow key={competitor.id}>
-                  <TableCell>{competitor.name}</TableCell>
-                  <TableCell><CompetitorTypeBadge type={competitor.type}/></TableCell>
-                  <TableCell>{competitor.createdAt}</TableCell>
-                  <TableCell>
-                    <ConfirmActionDialog
-                      trigger={<Button variant="destructive">Supprimer</Button>}
-                      title="Supprimer le compétiteur ?"
-                      description="Cette action est irréversible et supprimera toutes les données associées."
-                      confirmLabel="Supprimer"
-                      confirmVariant="destructive"
-                      onConfirm={() => handleDeleteCompetitor(competitor.id)}
-                    />
-                  </TableCell>
-                </TableRow>
-              )
-            )}
+              <TableRow key={competitor.id}>
+                <TableCell>{competitor.name}</TableCell>
+                <TableCell><CompetitorTypeBadge type={competitor.type}/></TableCell>
+                <TableCell>{competitor.createdAt}</TableCell>
+                <TableCell>
+                  <ConfirmActionDialog
+                    trigger={<Button variant="destructive">Supprimer</Button>}
+                    title="Supprimer le compétiteur ?"
+                    description="Cette action est irréversible et supprimera toutes les données associées."
+                    confirmLabel="Supprimer"
+                    confirmVariant="destructive"
+                    onConfirm={() => handleDeleteCompetitor(competitor.id)}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       )}
