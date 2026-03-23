@@ -13,6 +13,7 @@ const TournamentDetail = () => {
   const tournamentId = useParams().id;
   const [errorMsg, setErrorMsg] = useState('');
   const [currentRound, setCurrentRound] = useState(1);
+  const [selectedMatch, setSelectedMatch] = useState(null);
 
   const getTournament = useQuery({
     queryKey: ['tournament', tournamentId],
@@ -61,6 +62,11 @@ const TournamentDetail = () => {
     });
   }
 
+  const finalMatch = bracket ? bracketMap.get(bracket.totalRounds)?.[0] : null;
+  const champion = finalMatch?.winnerId
+    ? registrations.find(r => r.competitor.id === finalMatch.winnerId)?.competitor?.name
+    : null;
+
   // ---------
   // MUTATIONS
   // ---------
@@ -108,6 +114,20 @@ const TournamentDetail = () => {
     mutationFn: ({tournamentId, competitorId}) => registrationsApi.unregister(tournamentId, competitorId),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'registrations']});
+    },
+    onError: (error) => {
+      setErrorMsg(error.error || 'An error occurred');
+      setTimeout(() => setErrorMsg(''), 5000);
+    }
+  });
+
+  const recordResultMutation = useMutation({
+    mutationFn: ({matchId, winnerId}) => matchesApi.recordResult(tournamentId, matchId, winnerId),
+    onSuccess: () => {
+      setSelectedMatch(null);
+      queryClient.invalidateQueries({queryKey: ['matches', tournamentId, currentRound]});
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'bracket']});
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
     },
     onError: (error) => {
       setErrorMsg(error.error || 'An error occurred');
@@ -179,6 +199,9 @@ const TournamentDetail = () => {
       <h1>{tournament.name}</h1>
       {errorMsg && <p style={{color: 'red'}}>{errorMsg}</p>}
       <p>Statut : {tournament.status}</p>
+      {tournament.status === 'COMPLETED' && champion && (
+        <p><strong>Champion : {champion}</strong></p>
+      )}
       {tournament.status === 'DRAFT' &&
         <>
           <button onClick={() => handleInscriptions("open")}>Ouvrir les inscriptions</button>
@@ -258,6 +281,7 @@ const TournamentDetail = () => {
             <th>Participant 1</th>
             <th>Participant 2</th>
             <th>Winner</th>
+            <th>Actions</th>
           </tr>
           </thead>
           <tbody>
@@ -267,10 +291,26 @@ const TournamentDetail = () => {
               <td>{match.participants[0]?.competitor?.name || '-'}</td>
               <td>{match.participants[1]?.competitor?.name || '-'}</td>
               <td>{match.winnerId ? match.participants.find(p => p.competitorId === match.winnerId)?.competitor?.name : '-'}</td>
+              <td>
+                {match.status === 'READY' && (
+                  <button onClick={() => setSelectedMatch(match)}>Saisir résultat</button>
+                )}
+              </td>
             </tr>
           ))}
           </tbody>
         </table>
+      )}
+      {selectedMatch && (
+        <div>
+          <p>Sélectionner le vainqueur :</p>
+          {selectedMatch.participants.filter(p => p.competitor).map(p => (
+            <button key={p.slot} onClick={() => recordResultMutation.mutate({matchId: selectedMatch.id, winnerId: p.competitorId})}>
+              {p.competitor.name}
+            </button>
+          ))}
+          <button onClick={() => setSelectedMatch(null)}>Annuler</button>
+        </div>
       )}
       <h2>Every round</h2>
       <div style={{display: 'flex', gap: '2rem'}}>
