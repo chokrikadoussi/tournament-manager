@@ -1,4 +1,4 @@
-import {useParams} from "react-router-dom";
+import {useParams, Link} from "react-router-dom";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import tournamentsApi from "@/api/tournaments.js";
 import registrationsApi from "@/api/registrations.js";
@@ -38,12 +38,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog.jsx";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage, BreadcrumbSeparator
+} from "@/components/ui/breadcrumb.jsx";
 
 const MATCH_STATUS_CONFIG = {
-  PENDING:   {label: 'En attente', className: 'bg-muted text-muted-foreground hover:bg-muted'},
-  READY:     {label: 'Prêt',       className: 'bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400'},
-  BYE:       {label: 'Bye',        className: 'bg-muted text-muted-foreground hover:bg-muted'},
-  COMPLETED: {label: 'Terminé',    className: 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400', icon: Check},
+  PENDING: {label: 'En attente', className: 'bg-muted text-muted-foreground hover:bg-muted'},
+  READY: {
+    label: 'Prêt',
+    className: 'bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400'
+  },
+  BYE: {label: 'Bye', className: 'bg-muted text-muted-foreground hover:bg-muted'},
+  COMPLETED: {
+    label: 'Terminé',
+    className: 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400',
+    icon: Check
+  },
 };
 
 const ROW_CLASS = {
@@ -235,8 +249,26 @@ const TournamentDetail = () => {
 
   return (
     <div className="tournament-detail">
-      <h1>{tournament.name}</h1>
-      <p>Statut : <TournamentStatusBadge status={tournament.status}/></p>
+      {tournament && <Breadcrumb className="text-sm text-muted-foreground mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild><Link to="/">Accueil</Link></BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator/>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild><Link to="/tournaments">Tournois</Link></BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator/>
+          <BreadcrumbItem>
+            <BreadcrumbPage>{tournament.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>}
+
+      <div className="flex items-center gap-3">
+        <h1>{tournament.name}</h1>
+        <TournamentStatusBadge status={tournament.status}/>
+      </div>
       {tournament.status === 'COMPLETED' && champion && (
         <p><strong>Champion : {champion}</strong></p>
       )}
