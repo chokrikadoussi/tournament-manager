@@ -21,11 +21,21 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Skeleton} from "@/components/ui/skeleton.jsx";
 import ErrorMessage from "@/components/ErrorMessage.jsx";
 import TournamentStatusBadge from "@/components/TournamentStatusBadge.jsx";
-import {Calendar, User} from "lucide-react";
+import {Calendar, User, Trophy} from "lucide-react";
+import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group.jsx";
+
+const STATUS_LABELS = {
+  ALL: 'Tous',
+  DRAFT: 'Brouillon',
+  OPEN: 'Inscriptions ouvertes',
+  IN_PROGRESS: 'En cours',
+  COMPLETED: 'Terminé',
+};
 
 const Tournaments = () => {
 
   const [open, setOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -73,7 +83,10 @@ const Tournaments = () => {
     createMutation.mutate(payload);
   }
 
-  const tournaments = getTournaments.data?.data || [];
+  const allTournaments = getTournaments.data?.data || [];
+  const tournaments = statusFilter === 'ALL'
+    ? allTournaments
+    : allTournaments.filter(t => t.status === statusFilter);
 
   if (getTournaments.isLoading) {
     return (
@@ -148,9 +161,19 @@ const Tournaments = () => {
         </DialogContent>
       </Dialog>
 
-      {tournaments.length === 0 ?
-        <p>No tournaments available.</p>
-        :
+      <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={v => setStatusFilter(v || 'ALL')}>
+        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+          <ToggleGroupItem key={value} value={value}>{label}</ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+
+      {tournaments.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
+          <Trophy className="h-10 w-10" aria-hidden="true"/>
+          <p>{statusFilter === 'ALL' ? 'Aucun tournoi créé' : `Aucun tournoi "${STATUS_LABELS[statusFilter]}"`}</p>
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>Créer un tournoi</Button>
+        </div>
+      ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {tournaments.map((tournament) => (
             <Card key={tournament.id} className="w-full hover:shadow-md transition-shadow">
@@ -181,7 +204,7 @@ const Tournaments = () => {
           ))
           }
         </div>
-      }
+      )}
     </div>
   );
 }
