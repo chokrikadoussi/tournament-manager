@@ -3,7 +3,7 @@ import tournamentsApi from "@/api/tournaments.js";
 import {Link} from "react-router-dom";
 import {useState} from "react";
 import {queryClient} from "@/main.jsx";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.jsx";
+import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components/ui/card.jsx";
 import {
   Dialog,
   DialogClose,
@@ -21,6 +21,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Skeleton} from "@/components/ui/skeleton.jsx";
 import ErrorMessage from "@/components/ErrorMessage.jsx";
 import TournamentStatusBadge from "@/components/TournamentStatusBadge.jsx";
+import {Calendar, User} from "lucide-react";
 
 const Tournaments = () => {
 
@@ -150,20 +151,32 @@ const Tournaments = () => {
       {tournaments.length === 0 ?
         <p>No tournaments available.</p>
         :
-        <div className="flex">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {tournaments.map((tournament) => (
-            <Card key={tournament.id} className="w-full mx-2">
+            <Card key={tournament.id} className="w-full hover:shadow-md transition-shadow">
               <CardHeader>
-                <CardTitle>{tournament.name}</CardTitle>
+                <CardTitle className="flex justify-between font-bold text-xl">
+                  {tournament.name}
+                  <TournamentStatusBadge status={tournament.status}/>
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p>Sport : {tournament.sport || "Non renseigné"}</p>
-                <p>Max participants : {tournament.maxParticipants || "Pas de limite"}</p>
-                <p>Status : <TournamentStatusBadge status={tournament.status}/></p>
+              <CardContent className="space-y-1.5">
+                <p className="text-sm text-muted-foreground">{tournament.sport || 'Sport non renseigné'}</p>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" aria-hidden="true"/>
+                  <span>Max participants : {tournament.maxParticipants || 'Pas de limite'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" aria-hidden="true"/>
+                  <span>{new Date(tournament.createdAt).toLocaleDateString('fr-FR')}</span>
+                </div>
+              </CardContent>
+              <CardFooter className="justify-end">
                 <Button variant="link" asChild>
                   <Link to={`/tournaments/${tournament.id}`}>En savoir plus</Link>
                 </Button>
-              </CardContent>
+              </CardFooter>
+
             </Card>
           ))
           }
