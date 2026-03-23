@@ -187,7 +187,6 @@ const TournamentDetail = () => {
       setPendingResult(null);
       queryClient.invalidateQueries({queryKey: ['matches', tournamentId, currentRound]});
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'bracket']});
-      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
       toastSuccess("Résultat enregistré");
     },
     onError: (error) => {
