@@ -3,6 +3,23 @@ import tournamentsApi from "@/api/tournaments.js";
 import {Link} from "react-router-dom";
 import {useState} from "react";
 import {queryClient} from "@/main.jsx";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.jsx";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog.jsx";
+import {Button} from "@/components/ui/button.jsx";
+import {Field, FieldGroup} from "@/components/ui/field.jsx";
+import {Label} from "@/components/ui/label.jsx";
+import {Input} from "@/components/ui/input.jsx";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
+import {Skeleton} from "@/components/ui/skeleton.jsx";
+import {Badge} from "@/components/ui/badge.jsx";
 
 const Tournaments = () => {
 
@@ -57,50 +74,107 @@ const Tournaments = () => {
   const tournaments = getTournaments.data?.data || [];
 
   if (getTournaments.isLoading) {
-    return <p>Loading...</p>;
+    return (
+      <Card className="w-full max-w-xs">
+        <CardHeader>
+          <Skeleton className="h-4 w-2/3"/>
+          <Skeleton className="h-4 w-1/2"/>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="aspect-video w-full"/>
+        </CardContent>
+      </Card>
+
+    );
   }
 
   if (getTournaments.isError) {
     return <p>Error: {getTournaments.error?.message || String(getTournaments.error)}</p>;
   }
 
+  const badgeStatus = {
+    'DRAFT': <Badge variant="secondary">Brouillon</Badge>,
+    'OPEN': <Badge className="bg-blue-50 text-blue-700">Inscription en cours</Badge>,
+    'IN_PROGRESS': <Badge className="bg-orange-50 text-orange-700">En cours</Badge>,
+    'COMPLETED': <Badge className="bg-green-50 text-green-700">Terminé</Badge>,
+    'CANCELLED': <Badge className="bg-red-50 text-red-700">Annulé</Badge>
+  }
+
   return (
     <div>
       <h1>Tournaments</h1>
       {errorMsg && <p style={{color: 'red'}}>{errorMsg}</p>}
-      <button onClick={() => setOpen(true)}>Create a tournament</button>
-      {open && (
-        <form onSubmit={handleCreateTournament}>
-          <label>Name</label>
-          <input type="text" value={formData.name}
-                 onChange={(e) => setFormData({...formData, name: e.target.value})}></input>
-          <label>Sport</label>
-          <input type="text" value={formData.sport}
-                 onChange={(e) => setFormData({...formData, sport: e.target.value})}></input>
-          <label>Max participants</label>
-          <input type="number" value={formData.maxParticipants}
-                 onChange={(e) => setFormData({...formData, maxParticipants: e.target.value})}></input>
-          <label>Format</label>
-          <select value={formData.format} onChange={(e) => setFormData({...formData, format: e.target.value})}>
-            <option value="SINGLE_ELIM">Single elimination</option>
-            <option value="ROUND_ROBIN">Round robin</option>
-          </select>
-          <button type="submit">Create</button>
-          <button type="reset" onClick={() => clearData()}>Cancel</button>
-        </form>
-      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button onClick={() => setOpen(true)}>Créer un tournoi</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <form onSubmit={handleCreateTournament}>
+            <DialogHeader>
+              <DialogTitle>Créer un nouveau tournoi</DialogTitle>
+            </DialogHeader>
+            <FieldGroup>
+              <Field>
+                <Label htmlFor="name">Nom</Label>
+                <Input id="name" name="name" placeholder="Open de ..." value={formData.name}
+                       onChange={(e) => setFormData({...formData, name: e.target.value})}/>
+              </Field>
+              <Field>
+                <Label htmlFor="sport">Sport</Label>
+                <Input id="sport" name="sport" placeholder="Boxe anglaise" value={formData.sport}
+                       onChange={(e) => setFormData({...formData, sport: e.target.value})}/>
+              </Field>
+              <Field>
+                <Label htmlFor="maxparticipant">Nombre max de participants</Label>
+                <Input id="maxparticipant" name="maxparticipant" type="number" placeholder="150"
+                       value={formData.maxParticipants}
+                       onChange={(e) => setFormData({...formData, maxParticipants: e.target.value})}/>
+              </Field>
+              <Field>
+                <Label htmlFor="format">Type</Label>
+                <Select value={formData.format} onValueChange={(v) => setFormData({...formData, format: v})}>
+                  <SelectTrigger id="type">
+                    <SelectValue/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SINGLE_ELIM">Elimination unique (classique)</SelectItem>
+                    <SelectItem value="ROUND_ROBIN">Mélée générale</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </FieldGroup>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" type="reset" onClick={() => clearData()}>Annuler</Button>
+              </DialogClose>
+              <Button type="submit">Créer</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {tournaments.length === 0 ?
         <p>No tournaments available.</p>
         :
-        <ul>
+        <div className="flex">
           {tournaments.map((tournament) => (
-            <li key={tournament.id}>
-              <Link
-                to={`/tournaments/${tournament.id}`}>{tournament.name}</Link> - {tournament.sport || "No sport specified"} - {tournament.status}
-
-            </li>
-          ))}
-        </ul>
+            <Card key={tournament.id} className="w-full mx-2">
+              <CardHeader>
+                <CardTitle>{tournament.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p>Sport : {tournament.sport || "Non renseigné"}</p>
+                <p>Max participants : {tournament.maxParticipants || "Pas de limite"}</p>
+                <p>Status : {badgeStatus[tournament.status]}</p>
+                <Button variant="link" asChild>
+                  <Link to={`/tournaments/${tournament.id}`}>En savoir plus</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))
+          }
+        </div>
       }
     </div>
   );
