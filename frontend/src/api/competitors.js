@@ -1,7 +1,7 @@
 import {api} from './axios.js';
 
-const getAll = () => {
-  return api.get('/competitors');
+const getAll = (params = {}) => {
+  return api.get('/competitors',  { params });
 }
 
 const create = (data) => {
