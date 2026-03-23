@@ -214,20 +214,24 @@ const TournamentDetail = () => {
           {registrations.length >= 2 && <button onClick={handleStartTournament}>Démarrer le tournoi</button>}
         </>
       }
-      <h2>Add a new competitor</h2>
-      {competitorsNotInTournament.length === 0 ?
-        <p>No competitors found. Please add some competitors before registering them to the tournament.</p>
-        : (
-          <form onSubmit={handleCompetitorRegistration}>
-            <select name="competitorId">
-              {competitorsNotInTournament.map((competitor) => (
-                <option key={competitor.id}
-                        value={competitor.id}>{competitor.name} ({competitorLabel[competitor.type]})</option>
-              ))}
-            </select>
-            <button type="submit">Inscrire</button>
-          </form>
-        )}
+      {['DRAFT', 'OPEN'].includes(tournament.status) && (
+        <>
+          <h2>Add a new competitor</h2>
+          {competitorsNotInTournament.length === 0 ?
+            <p>No competitors found. Please add some competitors before registering them to the tournament.</p>
+            : (
+              <form onSubmit={handleCompetitorRegistration}>
+                <select name="competitorId">
+                  {competitorsNotInTournament.map((competitor) => (
+                    <option key={competitor.id}
+                            value={competitor.id}>{competitor.name} ({competitorLabel[competitor.type]})</option>
+                  ))}
+                </select>
+                <button type="submit">Inscrire</button>
+              </form>
+            )}
+        </>
+      )}
       <h2>List of Registrations</h2>
       {registrations.length === 0 ? (
         <p>No registrations found.</p>
@@ -256,7 +260,9 @@ const TournamentDetail = () => {
                 </td>
                 <td>{reg.createdAt}</td>
                 <td>
-                  <button onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</button>
+                  {['DRAFT', 'OPEN'].includes(tournament.status) && (
+                    <button onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</button>
+                  )}
                 </td>
               </tr>
             )
