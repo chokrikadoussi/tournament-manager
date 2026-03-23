@@ -26,6 +26,21 @@ import {
 } from "@/components/ui/select.jsx";
 import {toastSuccess, toastError} from "@/lib/toast.js";
 import BracketView from "@/components/BracketView.jsx";
+import {Badge} from "@/components/ui/badge.jsx";
+import {Check, Trophy, Pencil} from "lucide-react";
+
+const MATCH_STATUS_CONFIG = {
+  PENDING:   {label: 'En attente', className: 'bg-muted text-muted-foreground hover:bg-muted'},
+  READY:     {label: 'Prêt',       className: 'bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400'},
+  BYE:       {label: 'Bye',        className: 'bg-muted text-muted-foreground hover:bg-muted'},
+  COMPLETED: {label: 'Terminé',    className: 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400', icon: Check},
+};
+
+const ROW_CLASS = {
+  COMPLETED: 'bg-muted/30',
+  BYE: 'opacity-50',
+  READY: 'ring-1 ring-inset ring-primary/30 bg-primary/5',
+};
 
 const TournamentDetail = () => {
 
@@ -345,19 +360,56 @@ const TournamentDetail = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentRoundMatches.map((match) => (
-                  <TableRow key={match.id}>
-                    <TableCell>{match.status}</TableCell>
-                    <TableCell>{match.participants[0]?.competitor?.name || '-'}</TableCell>
-                    <TableCell>{match.participants[1]?.competitor?.name || '-'}</TableCell>
-                    <TableCell>{match.winnerId ? match.participants.find(p => p.competitorId === match.winnerId)?.competitor?.name : '-'}</TableCell>
-                    <TableCell>
-                      {match.status === 'READY' && (
-                        <Button variant="outline" onClick={() => setSelectedMatch(match)}>Saisir résultat</Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {currentRoundMatches.map((match) => {
+                  const statusCfg = MATCH_STATUS_CONFIG[match.status] || {label: match.status, className: ''};
+                  const StatusIcon = statusCfg.icon;
+                  const winner = match.winnerId
+                    ? match.participants.find(p => p.competitorId === match.winnerId)?.competitor
+                    : null;
+                  return (
+                    <TableRow key={match.id} className={ROW_CLASS[match.status]}>
+                      <TableCell>
+                        <Badge className={statusCfg.className}>
+                          {StatusIcon && <StatusIcon className="h-3 w-3 mr-1"/>}
+                          {statusCfg.label}
+                        </Badge>
+                      </TableCell>
+                      {[0, 1].map((slot) => {
+                        const p = match.participants[slot];
+                        const reg = registrations.find(r => r.competitor.id === p?.competitorId);
+                        return (
+                          <TableCell key={slot}>
+                            {p?.competitor ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span>{p.competitor.name}</span>
+                                <div className="flex items-center gap-1">
+                                  {reg?.seed && <span className="text-xs text-muted-foreground">(#{reg.seed})</span>}
+                                  <CompetitorTypeBadge type={p.competitor.type}/>
+                                </div>
+                              </div>
+                            ) : '-'}
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell>
+                        {winner ? (
+                          <div className="flex items-center gap-1 font-semibold text-primary">
+                            <Trophy className="h-4 w-4"/>
+                            {winner.name}
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {match.status === 'READY' && (
+                          <Button variant="default" onClick={() => setSelectedMatch(match)}>
+                            <Pencil className="h-4 w-4 mr-1"/>
+                            Saisir résultat
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
