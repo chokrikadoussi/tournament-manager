@@ -15,8 +15,8 @@ import {Field, FieldGroup} from '@/components/ui/field.jsx';
 import {Label} from '@/components/ui/label.jsx';
 import {Input} from '@/components/ui/input.jsx';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select.jsx';
-import ErrorMessage from '@/components/ErrorMessage.jsx';
 import TableSkeleton from '@/components/TableSkeleton.jsx';
+import {toastError} from '@/lib/toast.js';
 import CompetitorTypeBadge from '@/components/CompetitorTypeBadge.jsx';
 import ConfirmActionDialog from '@/components/ConfirmActionDialog.jsx';
 import {DataTable} from '@/components/ui/data-table.jsx';
@@ -28,7 +28,6 @@ const PAGE_SIZE = 10;
 const Competitors = () => {
 
   const [open, setOpen] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({ name: '', type: 'PLAYER' });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -66,8 +65,7 @@ const Competitors = () => {
       clearData();
     },
     onError: (error) => {
-      setErrorMsg(error.error || 'An error occurred');
-      setTimeout(() => setErrorMsg(''), 5000);
+      toastError(error.error || 'Une erreur est survenue lors de la création du compétiteur');
     },
   });
 
@@ -80,7 +78,9 @@ const Competitors = () => {
 
   const handleCreateCompetitor = (e) => {
     e.preventDefault();
-    createMutation.mutate(formData);
+    const name = formData.name.trim();
+    if (!name) return;
+    createMutation.mutate({...formData, name});
   };
 
   const competitors = getCompetitors.data?.data || [];
@@ -140,12 +140,11 @@ const Competitors = () => {
   );
 
   if (getCompetitors.isLoading) return <TableSkeleton />;
-  if (getCompetitors.isError) return <p>Error: {getCompetitors.error?.message || String(getCompetitors.error)}</p>;
+  if (getCompetitors.isError) return <p className="text-sm text-destructive">Impossible de charger les compétiteurs.</p>;
 
   return (
     <div className="space-y-4">
-      <h1>Competitors</h1>
-      <ErrorMessage message={errorMsg}/>
+      <h1>Compétiteurs</h1>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
@@ -160,6 +159,7 @@ const Competitors = () => {
               <Field>
                 <Label htmlFor="fullname">Nom</Label>
                 <Input id="fullname" name="fullname" placeholder="Chokri K" value={formData.name}
+                       maxLength={100} required
                        onChange={(e) => setFormData({...formData, name: e.target.value})}/>
               </Field>
               <Field>

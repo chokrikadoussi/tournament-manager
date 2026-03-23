@@ -70,11 +70,14 @@ const Tournaments = () => {
 
   const handleCreateTournament = (e) => {
     e.preventDefault();
+    const name = formData.name.trim();
+    const sport = formData.sport.trim();
+    if (!name) return;
     const payload = {
-      name: formData.name,
-      sport: formData.sport,
+      name,
+      sport: sport || undefined,
       format: formData.format,
-    }
+    };
     if (formData.maxParticipants) {
       payload.maxParticipants = parseInt(formData.maxParticipants);
     }
@@ -102,7 +105,7 @@ const Tournaments = () => {
   }
 
   if (getTournaments.isError) {
-    return <p>Error: {getTournaments.error?.message || String(getTournaments.error)}</p>;
+    return <p className="text-sm text-destructive">Impossible de charger les tournois.</p>;
   }
 
   return (
@@ -122,11 +125,13 @@ const Tournaments = () => {
               <Field>
                 <Label htmlFor="name">Nom</Label>
                 <Input id="name" name="name" placeholder="Open de ..." value={formData.name}
+                       maxLength={100} required
                        onChange={(e) => setFormData({...formData, name: e.target.value})}/>
               </Field>
               <Field>
                 <Label htmlFor="sport">Sport</Label>
                 <Input id="sport" name="sport" placeholder="Boxe anglaise" value={formData.sport}
+                       maxLength={100}
                        onChange={(e) => setFormData({...formData, sport: e.target.value})}/>
               </Field>
               <Field>

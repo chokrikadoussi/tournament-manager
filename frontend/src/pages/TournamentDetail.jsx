@@ -232,6 +232,13 @@ const TournamentDetail = () => {
 
   const handleSeedChange = (e, competitorId) => {
     const val = e.target.value;
+    if (val) {
+      const parsed = parseInt(val);
+      if (isNaN(parsed) || parsed < 1 || parsed > 999) {
+        toastError('Le classement doit être un entier entre 1 et 999.');
+        return;
+      }
+    }
     setSeedMutation.mutate({
       competitorId,
       seed: val ? parseInt(val) : null,
@@ -243,7 +250,7 @@ const TournamentDetail = () => {
   }
 
   if (getTournament.isError) {
-    return <p>Error: {getTournament.error?.message || String(getTournament.error)}</p>;
+    return <p className="text-sm text-destructive">Impossible de charger le tournoi.</p>;
   }
 
   return (
