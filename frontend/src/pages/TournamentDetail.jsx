@@ -247,14 +247,6 @@ const TournamentDetail = () => {
     return <p>Error: {getTournament.error?.message || String(getTournament.error)}</p>;
   }
 
-  if (getBracket.isError) {
-    toastError(getBracket.error?.message || 'Une erreur est survenue lors du chargement du bracket');
-  }
-
-  if (getBracketRound.isError) {
-    toastError(getBracketRound.error?.message || 'Une erreur est survenue lors du chargement des matchs du round');
-  }
-
   return (
     <div className="tournament-detail">
       {tournament && <Breadcrumb className="text-sm text-muted-foreground mb-4">
@@ -278,7 +270,15 @@ const TournamentDetail = () => {
         <TournamentStatusBadge status={tournament.status}/>
       </div>
       {tournament.status === 'COMPLETED' && champion && (
-        <p><strong>Champion : {champion}</strong></p>
+        <Card className="border-primary/30 bg-primary/5 my-4">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Trophy className="h-8 w-8 text-primary shrink-0"/>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Champion</p>
+              <p className="text-xl font-bold text-primary">{champion}</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
       {tournament.status === 'DRAFT' &&
         <>
@@ -348,13 +348,13 @@ const TournamentDetail = () => {
         </>
       )}
       <h2>Liste des compétiteurs inscrits</h2>
-      {registrations.length === 0 ? (
+      {getRegistrations.isLoading ? <TableSkeleton rows={3} cols={5}/> : registrations.length === 0 ? (
         <p>Aucune inscription trouvée.</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>Nom</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Classement</TableHead>
               <TableHead>Enregistré le</TableHead>
@@ -402,7 +402,9 @@ const TournamentDetail = () => {
               </Button>
             ))}
           </div>
-          {currentRoundMatches.length === 0 ? (
+          {getBracketRound.isError ? (
+            <p className="text-sm text-destructive">Impossible de charger les matchs de ce round.</p>
+          ) : getBracketRound.isLoading ? <TableSkeleton rows={3} cols={5}/> : currentRoundMatches.length === 0 ? (
             <p>Aucun match pour ce round.</p>
           ) : (
             <Table>
@@ -517,7 +519,10 @@ const TournamentDetail = () => {
             </AlertDialogContent>
           </AlertDialog>
           <h2>Vue d'ensemble</h2>
-          <BracketView bracketMap={bracketMap} totalRounds={bracket?.totalRounds}/>
+          {getBracket.isError
+            ? <p className="text-sm text-destructive">Impossible de charger le bracket.</p>
+            : <BracketView bracketMap={bracketMap} totalRounds={bracket?.totalRounds}/>
+          }
         </>
       )}
     </div>
