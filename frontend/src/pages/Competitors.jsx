@@ -1,7 +1,37 @@
 import {useMutation, useQuery} from "@tanstack/react-query";
-import { queryClient } from "@/main.jsx";
+import {queryClient} from "@/main.jsx";
 import competitorsApi from "@/api/competitors.js";
 import {useState} from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {Button} from "@/components/ui/button.jsx";
+import {Badge} from "@/components/ui/badge.jsx";
+import {
+  Dialog, DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog.jsx";
+import {Field, FieldGroup} from "@/components/ui/field.jsx";
+import {Label} from "@/components/ui/label.jsx";
+import {Input} from "@/components/ui/input.jsx";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
+import {Skeleton} from "@/components/ui/skeleton.jsx";
+import {
+  AlertDialog, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog.jsx";
 
 const Competitors = () => {
 
@@ -12,7 +42,7 @@ const Competitors = () => {
     type: 'PLAYER',
   });
   const clearData = () => {
-    setFormData({ name: '', type: 'PLAYER' });
+    setFormData({name: '', type: 'PLAYER'});
     setOpen(false);
   }
 
@@ -24,7 +54,7 @@ const Competitors = () => {
   const createMutation = useMutation({
     mutationFn: (data) => competitorsApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      queryClient.invalidateQueries({queryKey: ['competitors']});
       clearData();
     },
     onError: (error) => {
@@ -36,7 +66,7 @@ const Competitors = () => {
   const deleteMutation = useMutation({
     mutationFn: (id) => competitorsApi.remove(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      queryClient.invalidateQueries({queryKey: ['competitors']});
     },
   })
 
@@ -46,72 +76,125 @@ const Competitors = () => {
   }
 
   const handleDeleteCompetitor = (id) => {
-    if (window.confirm(`Are you sure you want to delete competitor?`)) {
-      deleteMutation.mutate(id);
-    }
+    deleteMutation.mutate(id);
   }
 
   const competitors = getCompetitors.data?.data || [];
 
   if (getCompetitors.isLoading) {
-    return <p>Loading...</p>;
+    return (
+      <div className="flex w-full max-w-sm flex-col gap-2">
+        {Array.from({length: 5}).map((_, index) => (
+          <div className="flex gap-4" key={index}>
+            <Skeleton className="h-4 flex-1"/>
+            <Skeleton className="h-4 w-24"/>
+            <Skeleton className="h-4 w-20"/>
+            <Skeleton className="h-4 w-20"/>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (getCompetitors.isError) {
     return <p>Error: {getCompetitors.error?.message || String(getCompetitors.error)}</p>;
   }
 
-  const competitorLabel = {
-    'PLAYER': 'Joueur',
-    'TEAM': 'Équipe',
+  const competitorBadge = {
+    'PLAYER': <Badge className="bg-blue-50 text-blue-700">Joueur</Badge>,
+    'TEAM': <Badge className="bg-green-50 text-green-700">Equipe</Badge>,
   }
 
   return (
     <div>
       <h1>Competitors</h1>
       {errorMsg && <p style={{color: 'red'}}>{errorMsg}</p>}
-      <button onClick={() => setOpen(true)}>Add a competitor</button>
-      {open && (
-        <form onSubmit={handleCreateCompetitor}>
-          <div>
-            <label htmlFor="fullname">Name</label>
-            <input type="text" name="fullname" id="fullname" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})}></input>
-            <label htmlFor="type">Type</label>
-            <select name="type" id="type" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-              <option value="PLAYER">Joueur</option>
-              <option value="TEAM">Equipe</option>
-            </select>
-            <button type="submit">Créer</button>
-            <button type="reset" onClick={() => clearData()}>Annuler</button>
-          </div>
-        </form>
-      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+
+        <DialogTrigger asChild>
+          <Button onClick={() => setOpen(true)}>Add a competitor</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <form onSubmit={handleCreateCompetitor}>
+            <DialogHeader>
+              <DialogTitle>Créer un nouveau compétiteur</DialogTitle>
+            </DialogHeader>
+            <FieldGroup>
+              <Field>
+                <Label htmlFor="fullname">Nom</Label>
+                <Input id="fullname" name="fullname" placeholder="Chokri K" value={formData.name}
+                       onChange={(e) => setFormData({...formData, name: e.target.value})}/>
+              </Field>
+              <Field>
+                <Label htmlFor="type">Type</Label>
+                <Select value={formData.type} onValueChange={(v) => setFormData({...formData, type: v})}>
+                  <SelectTrigger id="type">
+                    <SelectValue/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PLAYER">Joueur</SelectItem>
+                    <SelectItem value="TEAM">Equipe</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </FieldGroup>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" type="reset" onClick={() => clearData()}>Annuler</Button>
+              </DialogClose>
+              <Button type="submit">Créer</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+
+      </Dialog>
+
+
       {competitors.length === 0 ? (
         <p>No competitors found.</p>
       ) : (
-      <table>
-        <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Créé le</th>
-          <th>Actions</th>
-        </tr>
-        </thead>
-        <tbody>
-        {competitors.map((competitor) => (
-            <tr key={competitor.id}>
-              <td>{competitor.name}</td>
-              <td>{competitorLabel[competitor.type]}</td>
-              <td>{competitor.createdAt}</td>
-              <td>
-                <button onClick={() => handleDeleteCompetitor(competitor.id)}>Supprimer</button>
-              </td>
-            </tr>
-          )
-        )}
-        </tbody>
-      </table>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Créé le</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {competitors.map((competitor) => (
+                <TableRow key={competitor.id}>
+                  <TableCell>{competitor.name}</TableCell>
+                  <TableCell>{competitorBadge[competitor.type]}</TableCell>
+                  <TableCell>{competitor.createdAt}</TableCell>
+                  <TableCell>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive">Supprimer</Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent size="sm">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Supprimer le compétiteur ?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete this competitor and remove all associated data. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
+                          <Button variant="destructive"
+                                  onClick={() => handleDeleteCompetitor(competitor.id)}>Delete</Button>
+
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              )
+            )}
+          </TableBody>
+        </Table>
       )}
     </div>
   );
