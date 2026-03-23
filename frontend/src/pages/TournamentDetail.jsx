@@ -214,7 +214,7 @@ const TournamentDetail = () => {
           {registrations.length >= 2 && <button onClick={handleStartTournament}>Démarrer le tournoi</button>}
         </>
       }
-      {['DRAFT', 'OPEN'].includes(tournament.status) && (
+      {tournament.status === 'OPEN' && (
         <>
           <h2>Add a new competitor</h2>
           {competitorsNotInTournament.length === 0 ?
@@ -260,7 +260,7 @@ const TournamentDetail = () => {
                 </td>
                 <td>{reg.createdAt}</td>
                 <td>
-                  {['DRAFT', 'OPEN'].includes(tournament.status) && (
+                  {tournament.status === 'OPEN' && (
                     <button onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</button>
                   )}
                 </td>
