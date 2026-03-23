@@ -28,6 +28,16 @@ import {toastSuccess, toastError} from "@/lib/toast.js";
 import BracketView from "@/components/BracketView.jsx";
 import {Badge} from "@/components/ui/badge.jsx";
 import {Check, Trophy, Pencil} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog.jsx";
 
 const MATCH_STATUS_CONFIG = {
   PENDING:   {label: 'En attente', className: 'bg-muted text-muted-foreground hover:bg-muted'},
@@ -47,6 +57,7 @@ const TournamentDetail = () => {
   const tournamentId = useParams().id;
   const [currentRound, setCurrentRound] = useState(1);
   const [selectedMatch, setSelectedMatch] = useState(null);
+  const [pendingResult, setPendingResult] = useState(null); // { matchId, winnerId, winnerName }
   const [selectedCompetitorId, setSelectedCompetitorId] = useState('');
 
   const getTournament = useQuery({
@@ -159,6 +170,7 @@ const TournamentDetail = () => {
     mutationFn: ({matchId, winnerId}) => matchesApi.recordResult(tournamentId, matchId, winnerId),
     onSuccess: () => {
       setSelectedMatch(null);
+      setPendingResult(null);
       queryClient.invalidateQueries({queryKey: ['matches', tournamentId, currentRound]});
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'bracket']});
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
@@ -418,19 +430,48 @@ const TournamentDetail = () => {
               <CardHeader>
                 <CardTitle>Sélectionner le vainqueur</CardTitle>
               </CardHeader>
-              <CardContent className="flex gap-2">
-                {selectedMatch.participants.filter(p => p.competitor).map(p => (
-                  <Button key={p.slot} onClick={() => recordResultMutation.mutate({
-                    matchId: selectedMatch.id,
-                    winnerId: p.competitorId
-                  })}>
-                    {p.competitor.name}
-                  </Button>
-                ))}
-                <Button variant="outline" onClick={() => setSelectedMatch(null)}>Annuler</Button>
+              <CardContent className="flex gap-4 flex-wrap">
+                {selectedMatch.participants.filter(p => p.competitor).map(p => {
+                  const reg = registrations.find(r => r.competitor.id === p.competitorId);
+                  return (
+                    <div key={p.slot} className="flex flex-col items-center gap-1.5">
+                      <div className="flex items-center gap-1">
+                        {reg?.seed && <span className="text-xs text-muted-foreground">(#{reg.seed})</span>}
+                        <CompetitorTypeBadge type={p.competitor.type}/>
+                      </div>
+                      <Button onClick={() => setPendingResult({
+                        matchId: selectedMatch.id,
+                        winnerId: p.competitorId,
+                        winnerName: p.competitor.name,
+                      })}>
+                        {p.competitor.name}
+                      </Button>
+                    </div>
+                  );
+                })}
+                <Button variant="outline" className="self-end" onClick={() => setSelectedMatch(null)}>Annuler</Button>
               </CardContent>
             </Card>
           )}
+          <AlertDialog open={!!pendingResult} onOpenChange={(open) => !open && setPendingResult(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer le résultat</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Déclarer <strong>{pendingResult?.winnerName}</strong> vainqueur ? Cette action est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction onClick={() => recordResultMutation.mutate({
+                  matchId: pendingResult.matchId,
+                  winnerId: pendingResult.winnerId,
+                })}>
+                  Confirmer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <h2>Vue d'ensemble</h2>
           <BracketView bracketMap={bracketMap} totalRounds={bracket?.totalRounds}/>
         </>
