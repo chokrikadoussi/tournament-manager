@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {Button} from "@/components/ui/button.jsx";
-import {Badge} from "@/components/ui/badge.jsx";
 import {
   Dialog, DialogClose,
   DialogContent,
@@ -25,6 +24,8 @@ import {Label} from "@/components/ui/label.jsx";
 import {Input} from "@/components/ui/input.jsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
 import {Skeleton} from "@/components/ui/skeleton.jsx";
+import ErrorMessage from "@/components/ErrorMessage.jsx";
+import CompetitorTypeBadge from "@/components/CompetitorTypeBadge.jsx";
 import {
   AlertDialog, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription,
@@ -100,15 +101,10 @@ const Competitors = () => {
     return <p>Error: {getCompetitors.error?.message || String(getCompetitors.error)}</p>;
   }
 
-  const competitorBadge = {
-    'PLAYER': <Badge className="bg-blue-50 text-blue-700">Joueur</Badge>,
-    'TEAM': <Badge className="bg-green-50 text-green-700">Equipe</Badge>,
-  }
-
   return (
     <div>
       <h1>Competitors</h1>
-      {errorMsg && <p style={{color: 'red'}}>{errorMsg}</p>}
+      <ErrorMessage message={errorMsg}/>
 
       <Dialog open={open} onOpenChange={setOpen}>
 
@@ -167,7 +163,7 @@ const Competitors = () => {
             {competitors.map((competitor) => (
                 <TableRow key={competitor.id}>
                   <TableCell>{competitor.name}</TableCell>
-                  <TableCell>{competitorBadge[competitor.type]}</TableCell>
+                  <TableCell><CompetitorTypeBadge type={competitor.type}/></TableCell>
                   <TableCell>{competitor.createdAt}</TableCell>
                   <TableCell>
                     <AlertDialog>

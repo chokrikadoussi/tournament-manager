@@ -18,6 +18,9 @@ import {
 import {Button} from "@/components/ui/button.jsx";
 import {Input} from "@/components/ui/input.jsx";
 import {Skeleton} from "@/components/ui/skeleton.jsx";
+import ErrorMessage from "@/components/ErrorMessage.jsx";
+import CompetitorTypeBadge from "@/components/CompetitorTypeBadge.jsx";
+import TournamentStatusBadge from "@/components/TournamentStatusBadge.jsx";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.jsx";
 import {
   Select,
@@ -71,11 +74,6 @@ const TournamentDetail = () => {
   const competitorsNotInTournament = competitors.filter(c => !registrations.some(r => r.competitor.id === c.id));
   const bracket = ["IN_PROGRESS", "COMPLETED"].includes(tournament?.status) ? getBracket.data : null;
   const currentRoundMatches = getBracketRound.data || [];
-
-  const competitorLabel = {
-    'PLAYER': 'Joueur',
-    'TEAM': 'Équipe',
-  }
 
   const bracketMap = new Map(); // Map<round: number, matches: array>
   if (bracket?.rounds) {
@@ -223,8 +221,8 @@ const TournamentDetail = () => {
   return (
     <div className="tournament-detail">
       <h1>{tournament.name}</h1>
-      {errorMsg && <p style={{color: 'red'}}>{errorMsg}</p>}
-      <p>Statut : {tournament.status}</p>
+      <ErrorMessage message={errorMsg}/>
+      <p>Statut : <TournamentStatusBadge status={tournament.status}/></p>
       {tournament.status === 'COMPLETED' && champion && (
         <p><strong>Champion : {champion}</strong></p>
       )}
@@ -333,7 +331,7 @@ const TournamentDetail = () => {
             {registrations.map((reg) => (
                 <TableRow key={reg.id}>
                   <TableCell>{reg.competitor.name}</TableCell>
-                  <TableCell>{competitorLabel[reg.competitor.type]}</TableCell>
+                  <TableCell><CompetitorTypeBadge type={reg.competitor.type}/></TableCell>
                   <TableCell>
                     <Input type="number" defaultValue={reg.seed || ''} onBlur={(e) => handleSeedChange(e, reg.competitor.id)}/>
                   </TableCell>

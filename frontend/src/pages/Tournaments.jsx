@@ -19,7 +19,8 @@ import {Label} from "@/components/ui/label.jsx";
 import {Input} from "@/components/ui/input.jsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
 import {Skeleton} from "@/components/ui/skeleton.jsx";
-import {Badge} from "@/components/ui/badge.jsx";
+import ErrorMessage from "@/components/ErrorMessage.jsx";
+import TournamentStatusBadge from "@/components/TournamentStatusBadge.jsx";
 
 const Tournaments = () => {
 
@@ -92,18 +93,10 @@ const Tournaments = () => {
     return <p>Error: {getTournaments.error?.message || String(getTournaments.error)}</p>;
   }
 
-  const badgeStatus = {
-    'DRAFT': <Badge variant="secondary">Brouillon</Badge>,
-    'OPEN': <Badge className="bg-blue-50 text-blue-700">Inscription en cours</Badge>,
-    'IN_PROGRESS': <Badge className="bg-orange-50 text-orange-700">En cours</Badge>,
-    'COMPLETED': <Badge className="bg-green-50 text-green-700">Terminé</Badge>,
-    'CANCELLED': <Badge className="bg-red-50 text-red-700">Annulé</Badge>
-  }
-
   return (
     <div>
       <h1>Tournaments</h1>
-      {errorMsg && <p style={{color: 'red'}}>{errorMsg}</p>}
+      <ErrorMessage message={errorMsg}/>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
@@ -166,7 +159,7 @@ const Tournaments = () => {
               <CardContent>
                 <p>Sport : {tournament.sport || "Non renseigné"}</p>
                 <p>Max participants : {tournament.maxParticipants || "Pas de limite"}</p>
-                <p>Status : {badgeStatus[tournament.status]}</p>
+                <p>Status : <TournamentStatusBadge status={tournament.status}/></p>
                 <Button variant="link" asChild>
                   <Link to={`/tournaments/${tournament.id}`}>En savoir plus</Link>
                 </Button>
