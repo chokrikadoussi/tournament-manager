@@ -26,13 +26,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import ErrorMessage from "@/components/ErrorMessage.jsx";
 import TableSkeleton from "@/components/TableSkeleton.jsx";
 import CompetitorTypeBadge from "@/components/CompetitorTypeBadge.jsx";
-import {
-  AlertDialog, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger
-} from "@/components/ui/alert-dialog.jsx";
+import ConfirmActionDialog from "@/components/ConfirmActionDialog.jsx";
 
 const Competitors = () => {
 
@@ -155,25 +149,14 @@ const Competitors = () => {
                   <TableCell><CompetitorTypeBadge type={competitor.type}/></TableCell>
                   <TableCell>{competitor.createdAt}</TableCell>
                   <TableCell>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive">Supprimer</Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent size="sm">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Supprimer le compétiteur ?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete this competitor and remove all associated data. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
-                          <Button variant="destructive"
-                                  onClick={() => handleDeleteCompetitor(competitor.id)}>Delete</Button>
-
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <ConfirmActionDialog
+                      trigger={<Button variant="destructive">Supprimer</Button>}
+                      title="Supprimer le compétiteur ?"
+                      description="Cette action est irréversible et supprimera toutes les données associées."
+                      confirmLabel="Supprimer"
+                      confirmVariant="destructive"
+                      onConfirm={() => handleDeleteCompetitor(competitor.id)}
+                    />
                   </TableCell>
                 </TableRow>
               )

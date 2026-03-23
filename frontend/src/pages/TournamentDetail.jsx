@@ -8,13 +8,7 @@ import matchesApi from "@/api/matches.js";
 import {queryClient} from "@/main.jsx";
 import {useState} from "react";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.jsx";
-import {
-  AlertDialog, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
-} from "@/components/ui/alert-dialog.jsx";
+import ConfirmActionDialog from "@/components/ConfirmActionDialog.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Input} from "@/components/ui/input.jsx";
 import ErrorMessage from "@/components/ErrorMessage.jsx";
@@ -219,25 +213,13 @@ const TournamentDetail = () => {
         <>
           <Button onClick={() => handleInscriptions("open")}>Ouvrir les inscriptions</Button>
           {registrations.length >= 2 &&
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button>Démarrer le tournoi</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent size="sm">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Démarrer le tournoi ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently start the tournament and remove all associated data. This action cannot be
-                    undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel variant="outline">Annuler</AlertDialogCancel>
-                  <Button
-                    onClick={handleStartTournament}>Démarrer</Button>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmActionDialog
+              trigger={<Button>Démarrer le tournoi</Button>}
+              title="Démarrer le tournoi ?"
+              description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
+              confirmLabel="Démarrer"
+              onConfirm={handleStartTournament}
+            />
           }
         </>
       }
@@ -245,25 +227,13 @@ const TournamentDetail = () => {
         <>
           <Button onClick={() => handleInscriptions("close")}>Cloturer les inscriptions</Button>
           {registrations.length >= 2 &&
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button>Démarrer le tournoi</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent size="sm">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Démarrer le tournoi ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently start the tournament and remove all associated data. This action cannot be
-                    undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel variant="outline">Annuler</AlertDialogCancel>
-                  <Button
-                    onClick={handleStartTournament}>Démarrer</Button>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmActionDialog
+              trigger={<Button>Démarrer le tournoi</Button>}
+              title="Démarrer le tournoi ?"
+              description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
+              confirmLabel="Démarrer"
+              onConfirm={handleStartTournament}
+            />
           }
         </>
       }
@@ -327,25 +297,14 @@ const TournamentDetail = () => {
                   <TableCell>{reg.createdAt}</TableCell>
                   <TableCell>
                     {tournament.status === 'OPEN' &&
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive">Désinscrire</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent size="sm">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Désinscrire le compétiteur ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently unregister this competitor from the tournament and remove all
-                              associated data. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel variant="outline">Annuler</AlertDialogCancel>
-                            <Button variant="destructive"
-                                    onClick={() => handleCompetitorUnregister(reg.competitor)}>Désinscrire</Button>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>}
+                      <ConfirmActionDialog
+                        trigger={<Button variant="destructive">Désinscrire</Button>}
+                        title="Désinscrire le compétiteur ?"
+                        description="Cette action est irréversible et supprimera les données d'inscription associées."
+                        confirmLabel="Désinscrire"
+                        confirmVariant="destructive"
+                        onConfirm={() => handleCompetitorUnregister(reg.competitor)}
+                      />}
                   </TableCell>
                 </TableRow>
               )
