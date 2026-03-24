@@ -12,11 +12,11 @@ router.get('/', asyncWrap(controller.getAll));
 router.post('/', writeLimiter, asyncWrap(controller.create));
 router.get('/:id', asyncWrap(controller.getById));
 router.patch('/:id', asyncWrap(controller.updateById));
-router.delete('/:id', asyncWrap(controller.deleteById));
+router.delete('/:id', writeLimiter, asyncWrap(controller.deleteById));
 
-router.post('/:id/open', asyncWrap(controller.openTournament));
-router.post('/:id/close-registration', asyncWrap(controller.closeRegistration));
-router.post('/:id/cancel', asyncWrap(controller.cancelTournament));
+router.post('/:id/open', writeLimiter, asyncWrap(controller.openTournament));
+router.post('/:id/close-registration', writeLimiter, asyncWrap(controller.closeRegistration));
+router.post('/:id/cancel', writeLimiter, asyncWrap(controller.cancelTournament));
 router.get('/:id/stats', asyncWrap(controller.getStats));
 
 router.use('/:id/registrations', registrationRouter);
