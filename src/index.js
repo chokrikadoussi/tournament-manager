@@ -15,6 +15,21 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+if (!process.env.NODE_ENV) {
+  logger.warn("NODE_ENV non défini, utilisation de 'development' par défaut");
+}
+
+if (!process.env.CORS_ORIGIN) {
+  logger.warn("CORS_ORIGIN non défini, utilisation de 'http://localhost:5173' par défaut");
+}
+
+const rawPort = process.env.PORT;
+if (rawPort !== undefined && (!Number.isInteger(Number(rawPort)) || Number(rawPort) <= 0)) {
+  logger.warn(`PORT invalide (${rawPort}), utilisation de 3000 par défaut`);
+} else if (!rawPort) {
+  logger.warn('PORT non défini, utilisation de 3000 par défaut');
+}
+
 const app = express();
 app.use(pinoHttp({ logger }));
 app.use(helmet());
