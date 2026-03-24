@@ -1,6 +1,8 @@
 import { Prisma } from '../generated/prisma/index.js';
 import { AppError } from '../lib/AppError.js';
 
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
 export const errorHandler = (err, _req, res, _next) => {
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ error: err.message });
@@ -22,6 +24,10 @@ export const errorHandler = (err, _req, res, _next) => {
     return;
   }
 
-  console.error("[ERROR]", err);
+  if (NODE_ENV === 'production') {
+    console.error('[ERROR]', err.message);
+  } else {
+    console.error('[ERROR]', err);
+  }
   res.status(500).json({ error: 'Internal Server Error' });
 };
