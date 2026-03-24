@@ -16,11 +16,11 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "latest",
-    "cors": "latest",
+    "cors": "2.8.6",
     "dotenv": "latest",
-    "express": "latest",
+    "express": "5.2.1",
     "express-rate-limit": "^8.3.1",
-    "helmet": "latest",
+    "helmet": "8.1.0",
     "morgan": "^1.10.1",
     "zod": "^4.3.6"
   },
