@@ -20,17 +20,23 @@ if (!process.env.NODE_ENV) {
 }
 
 if (!process.env.CORS_ORIGIN) {
-  logger.warn("CORS_ORIGIN non défini, utilisation de 'http://localhost:5173' par défaut");
+  logger.warn(
+    "CORS_ORIGIN non défini, utilisation de 'http://localhost:5173' par défaut",
+  );
 }
 
 const rawPort = process.env.PORT;
-if (rawPort !== undefined && (!Number.isInteger(Number(rawPort)) || Number(rawPort) <= 0)) {
+if (
+  rawPort !== undefined &&
+  (!Number.isInteger(Number(rawPort)) || Number(rawPort) <= 0)
+) {
   logger.warn(`PORT invalide (${rawPort}), utilisation de 3000 par défaut`);
 } else if (!rawPort) {
   logger.warn('PORT non défini, utilisation de 3000 par défaut');
 }
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(pinoHttp({ logger }));
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
