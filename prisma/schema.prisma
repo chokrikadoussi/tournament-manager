@@ -55,6 +55,8 @@ model Competitor {
   id        String         @id @default(cuid())
   name      String
   type      CompetitorType @default(PLAYER)
+  gender    Gender?
+  birthYear Int?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
