@@ -4,6 +4,7 @@ import * as controller from './tournaments.controller.js';
 import registrationRouter from '../registrations/registrations.router.js';
 import bracketRouter from '../bracket/bracket.route.js';
 import matchesRouter from '../matches/matches.route.js';
+import categoriesRouter from '../categories/categories.route.js';
 import { writeLimiter } from '../lib/rateLimiter.js';
 
 const router = Router();
@@ -22,5 +23,6 @@ router.get('/:id/stats', asyncWrap(controller.getStats));
 router.use('/:id/registrations', registrationRouter);
 router.use('/:id/bracket', bracketRouter);
 router.use('/:id/matches', matchesRouter);
+router.use('/:id/categories', categoriesRouter);
 
 export default router;
