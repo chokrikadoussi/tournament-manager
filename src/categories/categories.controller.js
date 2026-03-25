@@ -59,3 +59,27 @@ export const deleteById = async (req, res) => {
   await service.deleteById(id, categoryId);
   res.status(204).send();
 };
+
+export const openCategory = async (req, res) => {
+  const { id, categoryId } = req.params;
+  const category = await service.openCategory(id, categoryId);
+  res.json(category);
+};
+
+export const closeCategory = async (req, res) => {
+  const { id, categoryId } = req.params;
+  const category = await service.closeCategory(id, categoryId);
+  res.json(category);
+};
+
+export const startCategory = async (req, res) => {
+  const { id, categoryId } = req.params;
+  const category = await service.startCategory(id, categoryId);
+  res.json(category);
+};
+
+export const cancelCategory = async (req, res) => {
+  const { id, categoryId } = req.params;
+  const category = await service.cancelCategory(id, categoryId);
+  res.json(category);
+};

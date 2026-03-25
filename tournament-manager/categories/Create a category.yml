@@ -1,0 +1,25 @@
+info:
+  name: Create a category
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/{{api}}/tournaments/cmn2au9li0003c06xlmpw6epe/categories"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Junior 2",
+        "gender": "MALE",
+        "birthYearMin": 2005,
+        "birthYearMax": 2008,
+        "maxParticipants": 10
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

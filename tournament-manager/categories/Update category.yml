@@ -1,0 +1,22 @@
+info:
+  name: Update category
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/{{api}}/tournaments/cmn2au9li0003c06xlmpw6epe/categories/cmn6mjshi0000ls6x3b1hpj8m"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Junior Masculin",
+        "maxParticipants": 16
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
