@@ -91,17 +91,10 @@ export async function generateBracket(tournamentId, thirdPlaceMatch = false) {
   });
 }
 
-export async function getBracket(tournamentId, format) {
+export async function getBracket(tournamentId, format, categoryId) {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
-    select: {
-      id: true,
-      status: true,
-      format: true,
-      _count: {
-        select: { registrations: true },
-      },
-    },
+    select: { id: true, status: true, format: true },
   });
 
   if (!tournament) {
@@ -115,14 +108,20 @@ export async function getBracket(tournamentId, format) {
     throw new AppError('Bracket has not been generated yet', 400);
   }
 
-  const totalRounds = getTotalRounds(tournament._count.registrations);
+  const matchWhere = { tournamentId, ...(categoryId && { categoryId }) };
+
+  const participantCount = await prisma.tournamentRegistration.count({
+    where: { tournamentId, ...(categoryId && { categoryId }) },
+  });
+
+  const totalRounds = getTotalRounds(participantCount);
 
   if (
     format === 'visual' &&
     tournament.format === TournamentFormat.SINGLE_ELIM
   ) {
     const allMatches = await prisma.match.findMany({
-      where: { tournamentId },
+      where: matchWhere,
       include: {
         participants: {
           include: { competitor: true },
@@ -142,7 +141,7 @@ export async function getBracket(tournamentId, format) {
 
   for (let round = 1; round <= totalRounds; round++) {
     const matches = await prisma.match.findMany({
-      where: { tournamentId, round },
+      where: { ...matchWhere, round },
       select: {
         id: true,
         position: true,
@@ -161,13 +160,7 @@ export async function getBracket(tournamentId, format) {
     rounds.push({ round, matches });
   }
 
-  const data = {
-    tournamentId: tournament.id,
-    totalRounds,
-    rounds,
-  };
-
-  return data;
+  return { tournamentId: tournament.id, totalRounds, rounds };
 }
 
 function buildTree(match, allMatches) {

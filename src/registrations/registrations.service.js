@@ -1,6 +1,6 @@
 import { prisma } from '../db.js';
 import { AppError } from '../lib/AppError.js';
-import { TournamentStatus } from '../generated/prisma/client.js';
+import { TournamentStatus, Gender } from '../generated/prisma/client.js';
 
 const VALID_STATUS = [TournamentStatus.OPEN, TournamentStatus.DRAFT];
 
@@ -15,6 +15,7 @@ export const getAll = async (id) => {
 export const register = async (tournamentId, competitorId) => {
   // 1) Vérifier le tournoi
   const tournament = await prisma.tournament.findUnique({
+    include: { categories: true },
     where: { id: tournamentId },
   });
 
@@ -38,6 +39,35 @@ export const register = async (tournamentId, competitorId) => {
     throw new AppError('Competitor not found', 404);
   }
 
+  // Récupérer les catégories OPEN du tournoi
+  const openCategories = (tournament.categories || []).filter(
+    (c) => c.status === TournamentStatus.OPEN,
+  );
+  const isGenderMatch = (category) =>
+    category.gender &&
+    (category.gender === competitor.gender || category.gender === Gender.MIXED);
+  const isBirthYearInRange = (category) =>
+    (!category.birthYearMin || competitor.birthYear >= category.birthYearMin) &&
+    (!category.birthYearMax || competitor.birthYear <= category.birthYearMax);
+
+  const competitorCategories = openCategories.filter(
+    (category) => isGenderMatch(category) && isBirthYearInRange(category),
+  );
+
+  let categoryId = undefined;
+  if (competitorCategories.length === 0) {
+    // liste d'attente
+  } else if (competitorCategories.length === 1) {
+    // inscription validée
+    categoryId = competitorCategories[0].id;
+  } else {
+    // plusieurs catégories possibles, on prend la plus spécifique (ex: homme > mixte)
+    throw new AppError(
+      "Chevauchement de catégories, l'inscription n'est pas possible",
+      422,
+    );
+  }
+
   // 3) Vérifier max participants
   const registrationCount = await prisma.tournamentRegistration.count({
     where: { tournamentId },
@@ -53,7 +83,7 @@ export const register = async (tournamentId, competitorId) => {
   // 4) Créer l'inscription + vérif si déjà inscrit (contrainte d'unicité)
   try {
     return await prisma.tournamentRegistration.create({
-      data: { tournamentId, competitorId },
+      data: { tournamentId, competitorId, categoryId },
       include: {
         competitor: true,
       },
@@ -95,7 +125,12 @@ export const unregister = async (tournamentId, competitorId) => {
   });
 };
 
-export const updateSeed = async (tournamentId, competitorId, seed) => {
+export const updateSeed = async (
+  tournamentId,
+  competitorId,
+  seed,
+  categoryId,
+) => {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
   });
@@ -133,9 +168,27 @@ export const updateSeed = async (tournamentId, competitorId, seed) => {
     }
   }
 
+  if (categoryId) {
+    const category = await prisma.category.findFirst({
+      where: { id: categoryId, tournamentId },
+    });
+
+    if (!category) {
+      throw new AppError('Category not found', 404);
+    }
+
+    if (category.status !== TournamentStatus.OPEN) {
+      throw new AppError('Cannot assign a category that is not open', 400);
+    }
+  }
+
+  const updateData = {};
+  if (seed !== undefined) updateData.seed = seed;
+  if (categoryId !== undefined) updateData.categoryId = categoryId;
+
   return await prisma.tournamentRegistration.update({
     where: { tournamentId_competitorId: { tournamentId, competitorId } },
-    data: { seed },
+    data: updateData,
     include: { competitor: true },
   });
 };

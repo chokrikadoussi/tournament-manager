@@ -11,7 +11,8 @@ export async function generateSingleElim(
   participants,
   tournamentId,
   registrations,
-  thirdPlaceMatch = false
+  thirdPlaceMatch = false,
+  categoryId = null
 ) {
   const totalRounds = getTotalRounds(participants.length);
 
@@ -28,6 +29,7 @@ export async function generateSingleElim(
         tournamentId,
         round,
         position: pos,
+        ...(categoryId && { categoryId }),
       };
       roundMatches.push(match);
     }
@@ -69,6 +71,7 @@ export async function generateSingleElim(
         round: totalRounds,
         position: 1,
         status: MatchStatus.PENDING, // les participants seront ajoutés après les demi-finales
+        ...(categoryId && { categoryId }),
       },
     });
   }
@@ -94,7 +97,7 @@ export async function generateSingleElim(
   });
   // 3. Propager les byes (voir TOUR-29)
   const populatedMatches = await tx.match.findMany({
-    where: { tournamentId, round: 1 },
+    where: { tournamentId, round: 1, ...(categoryId && { categoryId }) },
     include: {
       _count: {
         select: { participants: true },
@@ -118,7 +121,7 @@ export async function generateSingleElim(
   // Gestion des byes pour les rounds suivants
   for (let round = 1; round <= totalRounds - 1; round++) {
     const matchesToPropagate = await tx.match.findMany({
-      where: { tournamentId, round },
+      where: { tournamentId, round, ...(categoryId && { categoryId }) },
       include: { participants: true },
     });
 

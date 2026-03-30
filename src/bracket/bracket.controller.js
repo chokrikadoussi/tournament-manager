@@ -8,6 +8,7 @@ const generateSchema = z.object({
 
 const getBracketSchema = z.object({
   format: z.enum(['visual']).optional(),
+  categoryId: z.string().optional(),
 });
 
 export const generate = async (req, res) => {
@@ -20,7 +21,7 @@ export const generate = async (req, res) => {
 
 export const getBracket = async (req, res) => {
   const { id } = req.params;
-  const { format } = validate(getBracketSchema, req.query);
-  const bracket = await service.getBracket(id, format);
+  const { format, categoryId } = validate(getBracketSchema, req.query);
+  const bracket = await service.getBracket(id, format, categoryId);
   res.json(bracket);
 };

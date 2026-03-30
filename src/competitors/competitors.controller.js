@@ -1,10 +1,11 @@
 import * as service from './competitors.service.js';
-import { CompetitorType } from '../generated/prisma/client.js';
+import { CompetitorType, Gender } from '../generated/prisma/client.js';
 import { buildPaginatedResponse, parsePagination } from '../lib/paginate.js';
 import {z} from 'zod';
 import { validate } from '../lib/validate.js';
 
 const VALID_TYPES = Object.values(CompetitorType);
+const VALID_GENDERS = Object.values(Gender);
 
 const getAllSchema = z.object({
   type: z.enum(VALID_TYPES).optional(),
@@ -14,11 +15,15 @@ const getAllSchema = z.object({
 const createSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.enum(VALID_TYPES).optional(),
+  gender: z.enum(VALID_GENDERS).optional(),
+  birthYear: z.number().int().min(1900).max(new Date().getFullYear()).optional(),
 });
 
 const updateSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
   type: z.enum(VALID_TYPES).optional(),
+  gender: z.enum(VALID_GENDERS).optional(),
+  birthYear: z.number().int().min(1900).max(new Date().getFullYear()).optional(),
 });
 
 export const getAll = async (req, res) => {
@@ -30,9 +35,9 @@ export const getAll = async (req, res) => {
 };
 
 export const create = async (req, res) => {
-  const { name, type } = validate(createSchema, req.body);
+  const { name, type, gender, birthYear } = validate(createSchema, req.body);
 
-  const competitor = await service.create({ name, type });
+  const competitor = await service.create({ name, type, gender, birthYear });
   res.status(201).json(competitor);
 };
 
@@ -44,9 +49,9 @@ export const getById = async (req, res) => {
 
 export const updateById = async (req, res) => {
   const { id } = req.params;
-  const { name, type } = validate(updateSchema, req.body);
+  const { name, type, gender, birthYear } = validate(updateSchema, req.body);
 
-  const competitor = await service.updateById(id, { name, type });
+  const competitor = await service.updateById(id, { name, type, gender, birthYear });
   res.json(competitor);
 };
 

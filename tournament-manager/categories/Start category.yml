@@ -1,0 +1,15 @@
+info:
+  name: Start category
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{baseUrl}}/{{api}}/tournaments/cmn2au9li0003c06xlmpw6epe/categories/cmn6mjshi0000ls6x3b1hpj8m/start"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

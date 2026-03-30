@@ -7,7 +7,8 @@ const registerSchema = z.object({
 });
 
 const updateSeedSchema = z.object({
-  seed: z.number().int().positive().nullable(),
+  seed: z.number().int().positive().nullable().optional(),
+  categoryId: z.string().nullable().optional(),
 });
 
 export const getAll = async (req, res) => {
@@ -32,8 +33,8 @@ export const unregister = async (req, res) => {
 
 export const updateSeed = async (req, res) => {
   const { id, competitorId } = req.params;
-  const { seed } = validate(updateSeedSchema, req.body);
+  const { seed, categoryId } = validate(updateSeedSchema, req.body);
 
-  const registration = await service.updateSeed(id, competitorId, seed);
+  const registration = await service.updateSeed(id, competitorId, seed, categoryId);
   res.json(registration);
 };

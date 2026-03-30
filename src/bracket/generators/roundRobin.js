@@ -1,6 +1,6 @@
 import { MatchStatus } from '../../generated/prisma/client.js';
 
-export async function generateRoundRobin(tx, tournamentId, registrations) {
+export async function generateRoundRobin(tx, tournamentId, registrations, categoryId = null) {
   const participants = registrations
     .sort((a, b) => {
       if (a.seed === null) return 1;
@@ -45,6 +45,7 @@ export async function generateRoundRobin(tx, tournamentId, registrations) {
       tournamentId,
       round: mp.round,
       position: mp.position,
+      ...(categoryId && { categoryId }),
     })),
     select: {
       id: true,
@@ -76,7 +77,7 @@ export async function generateRoundRobin(tx, tournamentId, registrations) {
 
   // 6. Status : 2 vrais participants → READY, 1 vrai + BYE → BYE + winnerId = le vrai participant
   const populatedMatches = await tx.match.findMany({
-    where: { tournamentId },
+    where: { tournamentId, ...(categoryId && { categoryId }) },
     include: {
       _count: {
         select: { participants: true },

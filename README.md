@@ -1,76 +1,135 @@
-# Tournament Manager API
+# Tournament Manager
 
-A REST API for managing sports tournaments — competitors, registrations, bracket generation, match results, and statistics.
+A full-stack web application for managing sports tournaments — from competitor registration to bracket generation and match results tracking.
 
-## Stack
+**Live demo:** [tournament-manager-wine.vercel.app](https://tournament-manager-wine.vercel.app)
+**API:** [open-taekwondo-api-0bfc22610b36.herokuapp.com](https://open-taekwondo-api-0bfc22610b36.herokuapp.com/health)
+
+---
+
+## Overview
+
+Tournament Manager covers the full lifecycle of a sports competition:
+
+- **Competitor management** — register players or teams with profile data (gender, birth year)
+- **Tournament lifecycle** — state machine from draft to completion (`DRAFT → OPEN → IN_PROGRESS → COMPLETED`)
+- **Category system** — group competitors by age range and gender, each with its own independent lifecycle
+- **Bracket generation** — single elimination (with ATP-style seeding) and round robin (circle method)
+- **Match results** — record outcomes round by round with automatic winner progression
+
+---
+
+## Tech Stack
+
+### Backend
 
 | Layer | Technology |
 |-------|-----------|
 | Runtime | Node.js 20 (ES Modules) |
-| Framework | Express.js |
-| ORM | Prisma + `@prisma/adapter-pg` |
+| Framework | Express 5 |
+| ORM | Prisma 7 + `@prisma/adapter-pg` |
 | Database | PostgreSQL 16 |
-| Validation | Zod |
-| Logging | Morgan |
-| Rate limiting | express-rate-limit |
+| Validation | Zod 4 |
+| Logging | pino + pino-http |
+| Security | Helmet, express-rate-limit |
+| Deployment | Heroku (with `release` phase migrations) |
+
+### Frontend
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 19 + Vite 8 |
+| Routing | React Router 7 |
+| Data fetching | TanStack Query 5 |
+| Tables | TanStack Table 8 |
+| UI components | shadcn/ui (Radix UI + Tailwind CSS 4) |
+| HTTP client | Axios |
+| Deployment | Vercel |
 
 ---
 
-## Getting Started
+## Architecture
 
-### Prerequisites
+The project follows a monorepo structure with a strict separation between backend and frontend.
 
-- Node.js 20+
-- Docker & Docker Compose
-
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone <repo-url>
-cd tournament-manager
-
-# 2. Install dependencies
-npm install
-
-# 3. Configure environment
-cp .env.example .env
+```
+tournament-manager/
+├── src/                        # Express API
+│   ├── index.js                # App entry point (middleware, mounts)
+│   ├── db.js                   # Prisma singleton (env-aware SSL)
+│   ├── lib/
+│   │   ├── AppError.js         # Custom error class with HTTP status
+│   │   ├── asyncWrap.js        # Async error propagation to Express
+│   │   ├── paginate.js         # Cursor/offset pagination helpers
+│   │   ├── rateLimiter.js      # Read/write rate limit configs
+│   │   └── validate.js         # Zod validation wrapper
+│   ├── middleware/
+│   │   ├── errorHandler.js     # Global error → JSON response
+│   │   └── notFound.js         # 404 catch-all
+│   ├── competitors/            # CRUD + statistics
+│   ├── tournaments/            # CRUD + lifecycle state machine
+│   ├── categories/             # CRUD + independent lifecycle + gate rules
+│   ├── registrations/          # Register / unregister / seed assignment
+│   ├── bracket/
+│   │   ├── bracket.service.js  # Generation dispatcher
+│   │   ├── bracket.utils.js    # Seeding, power-of-two helpers
+│   │   └── generators/
+│   │       ├── singleElim.js   # Single elimination + bye propagation
+│   │       └── roundRobin.js   # Round robin (Berger tables / circle method)
+│   └── matches/                # Result recording + bracket progression
+├── prisma/
+│   ├── schema.prisma           # Data model
+│   └── migrations/             # Migration history
+├── frontend/
+│   └── src/
+│       ├── api/                # Axios-based API clients (one per domain)
+│       ├── components/         # Shared UI components
+│       ├── pages/              # Route-level components
+│       └── lib/                # Toast helpers, utils
+└── tournament-manager/         # Bruno API collection (local testing)
 ```
 
-Edit `.env`:
-```env
-PORT=3000
-DATABASE_URL="postgresql://postgres:postgres@localhost:5433/open?schema=public"
+### Key design decisions
+
+**Service / Controller / Router separation** — controllers handle HTTP concerns (req/res, status codes), services hold business logic and throw `AppError`, routers declare routes and apply middleware. This keeps each layer independently testable.
+
+**Tournament status as a gate** — the tournament's status controls what category operations are allowed. A category can only be opened when the tournament is `OPEN`; a bracket can only be generated when the tournament is `OPEN` or `IN_PROGRESS`. This prevents orphaned state without requiring complex validations in each endpoint.
+
+**Category lifecycle is independent** — each category follows its own `DRAFT → OPEN → IN_PROGRESS → COMPLETED` cycle within the tournament container. Starting a category automatically transitions the tournament to `IN_PROGRESS` if it hasn't already.
+
+**Bracket per category** — match generation (`generateSingleElim`, `generateRoundRobin`) accepts an optional `categoryId` that is stamped on every match created. This enables parallel brackets within a single tournament.
+
+**ATP-style seeding** — seeds 1 and 2 are placed in opposite halves, seeds 3–4 are randomized across quarter positions, and unseeded competitors fill remaining slots via Fisher-Yates shuffle. This ensures top seeds can only meet in the final.
+
+---
+
+## Data Model
+
+```
+Competitor ──< TournamentRegistration >── Tournament
+   gender              │ seed, categoryId      │ format, status
+   birthYear           │                       │
+                       │                    Category
+                       │                       │ gender, birthYearMin/Max
+                       │                       │ status (independent lifecycle)
+                       │                       │
+                    Match ──< MatchParticipant >── Competitor
+                    │ categoryId
+                    │ nextMatchId (self-referential → bracket tree)
+                    │ winnerId
 ```
 
-> Note: Docker Compose maps PostgreSQL to port **5433** (to avoid conflicts with a local instance).
+**Enums:**
 
-### Start the database
+| Enum | Values |
+|------|--------|
+| `TournamentStatus` | `DRAFT` `OPEN` `IN_PROGRESS` `COMPLETED` `CANCELLED` |
+| `TournamentFormat` | `SINGLE_ELIM` `ROUND_ROBIN` `DOUBLE_ELIM`* |
+| `MatchStatus` | `PENDING` `READY` `COMPLETED` `BYE` |
+| `CompetitorType` | `PLAYER` `TEAM` |
+| `Gender` | `MALE` `FEMALE` `MIXED` |
 
-```bash
-docker compose up -d
-```
-
-### Run migrations & generate Prisma client
-
-```bash
-npm run db:migrate
-npm run db:generate
-```
-
-### Start the server
-
-```bash
-# Development (with hot reload)
-npm run dev
-
-# Production
-npm start
-```
-
-The API is available at `http://localhost:3000`.
-
-Health check: `GET /health` → `{ "status": "ok" }`
+*DOUBLE_ELIM format is defined in the schema but not yet implemented.
 
 ---
 
@@ -82,144 +141,121 @@ Base URL: `/api/v1`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/competitors` | List competitors (filters: `?type`, `?search`, pagination: `?page`, `?limit`) |
+| `GET` | `/competitors` | List competitors (`?type`, `?search`, `?page`, `?limit`) |
 | `POST` | `/competitors` | Create a competitor |
-| `GET` | `/competitors/:id` | Get a competitor by ID |
-| `PATCH` | `/competitors/:id` | Update a competitor |
-| `DELETE` | `/competitors/:id` | Delete a competitor |
-| `GET` | `/competitors/:id/stats` | Get competitor statistics |
-
-**Competitor stats response:**
-```json
-{
-  "competitorId": "uuid",
-  "name": "Alice",
-  "stats": {
-    "tournamentsPlayed": 5,
-    "wins": 12,
-    "losses": 4,
-    "winRate": 75,
-    "matchesPlayed": 16
-  }
-}
-```
+| `GET` | `/competitors/:id` | Get by ID |
+| `PATCH` | `/competitors/:id` | Update |
+| `DELETE` | `/competitors/:id` | Delete |
+| `GET` | `/competitors/:id/stats` | Win/loss statistics |
 
 ### Tournaments
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/tournaments` | List tournaments (filters: `?status`, `?sport`, pagination: `?page`, `?limit`) |
+| `GET` | `/tournaments` | List tournaments (`?status`, `?sport`, `?page`, `?limit`) |
 | `POST` | `/tournaments` | Create a tournament |
-| `GET` | `/tournaments/:id` | Get a tournament by ID |
-| `PATCH` | `/tournaments/:id` | Update a tournament |
-| `DELETE` | `/tournaments/:id` | Delete a tournament |
-| `GET` | `/tournaments/:id/stats` | Get tournament statistics |
+| `GET` | `/tournaments/:id` | Get by ID |
+| `PATCH` | `/tournaments/:id` | Update |
+| `DELETE` | `/tournaments/:id` | Delete |
+| `GET` | `/tournaments/:id/stats` | Participant and match statistics |
 | `POST` | `/tournaments/:id/open` | Open registrations (`DRAFT → OPEN`) |
 | `POST` | `/tournaments/:id/close-registration` | Close registrations (`OPEN → DRAFT`) |
 | `POST` | `/tournaments/:id/cancel` | Cancel the tournament |
 
-**Tournament lifecycle (state machine):**
-```
-DRAFT ──→ OPEN ──→ (generate bracket) ──→ IN_PROGRESS ──→ COMPLETED
-  │         │                                   │
-  └─────────┴───────────── CANCELLED ←──────────┘
-```
+### Categories
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/tournaments/:id/categories` | List categories (with registration counts) |
+| `POST` | `/tournaments/:id/categories` | Create a category (requires tournament `DRAFT` or `OPEN`) |
+| `GET` | `/tournaments/:id/categories/:catId` | Get by ID |
+| `PATCH` | `/tournaments/:id/categories/:catId` | Update (requires category `DRAFT`) |
+| `DELETE` | `/tournaments/:id/categories/:catId` | Delete (requires `DRAFT` + 0 registrations) |
+| `POST` | `/tournaments/:id/categories/:catId/open` | `DRAFT → OPEN` (requires tournament `OPEN`) |
+| `POST` | `/tournaments/:id/categories/:catId/close` | `OPEN → DRAFT` |
+| `POST` | `/tournaments/:id/categories/:catId/start` | Generate bracket + `OPEN → IN_PROGRESS` |
+| `POST` | `/tournaments/:id/categories/:catId/cancel` | `DRAFT\|OPEN → CANCELLED` |
 
 ### Registrations
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/tournaments/:id/registrations` | List registrations |
-| `POST` | `/tournaments/:id/registrations` | Register a competitor |
-| `DELETE` | `/tournaments/:id/registrations/:competitorId` | Unregister a competitor |
-| `PATCH` | `/tournaments/:id/registrations/:competitorId` | Assign a seed (`{ seed: number \| null }`) |
+| `POST` | `/tournaments/:id/registrations` | Register a competitor (auto-assigns category if available) |
+| `DELETE` | `/tournaments/:id/registrations/:competitorId` | Unregister |
+| `PATCH` | `/tournaments/:id/registrations/:competitorId` | Update seed or category assignment |
 
 ### Bracket
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/tournaments/:id/bracket` | Generate the bracket |
-| `GET` | `/tournaments/:id/bracket` | Get bracket (by rounds) |
-| `GET` | `/tournaments/:id/bracket?format=visual` | Get bracket as nested tree |
-
-**Query parameters for generation:**
-- `?thirdPlace=true` — add a third-place match (SINGLE_ELIM only)
-
-**Supported formats:**
-
-| Format | Description |
-|--------|-------------|
-| `SINGLE_ELIM` | Single elimination with standard sports seeding (ATP/Grand Slam) |
-| `ROUND_ROBIN` | Round robin using the circle method |
-| `DOUBLE_ELIM` | Not yet supported |
-
-**Visual tree response (`?format=visual`):**
-```json
-{
-  "tournamentId": "uuid",
-  "format": "visual",
-  "final": {
-    "matchId": "uuid",
-    "round": 3,
-    "position": 0,
-    "status": "PENDING",
-    "winnerId": null,
-    "participants": [
-      { "slot": 0, "competitorId": "uuid", "name": "Alice" }
-    ],
-    "children": [...]
-  }
-}
-```
+| `POST` | `/tournaments/:id/bracket` | Generate bracket (`?thirdPlace=true` for SINGLE_ELIM) |
+| `GET` | `/tournaments/:id/bracket` | Get bracket grouped by rounds |
+| `GET` | `/tournaments/:id/bracket?format=visual` | Get bracket as a nested tree (for visual rendering) |
 
 ### Matches
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/tournaments/:id/matches` | List matches (filters: `?round`, `?status`) |
+| `GET` | `/tournaments/:id/matches` | List matches (`?round`, `?status`) |
 | `GET` | `/tournaments/:id/matches/:matchId` | Get a match by ID |
-| `POST` | `/tournaments/:id/matches/:matchId/result` | Record a match result |
+| `POST` | `/tournaments/:id/matches/:matchId/result` | Record a result and advance the winner |
 
 ---
 
-## Data Model
+## Getting Started (local development)
 
+### Prerequisites
+
+- Node.js 20+
+- Docker & Docker Compose
+
+### Setup
+
+```bash
+# 1. Clone the repository
+git clone <repo-url>
+cd tournament-manager
+
+# 2. Install backend dependencies
+npm install
+
+# 3. Install frontend dependencies
+cd frontend && npm install && cd ..
+
+# 4. Configure environment
+cp .env.example .env
+# Edit .env — defaults work with Docker Compose (PostgreSQL on :5433)
 ```
-Competitor ──< TournamentRegistration >── Tournament
-                       │ seed                   │ format
-                                                │
-                                             Match ──< MatchParticipant >── Competitor
-                                             │ nextMatchId (self-ref)
-                                             │ winnerId
+
+### Start
+
+```bash
+# Terminal 1 — Database only (recommended for dev)
+docker compose up postgres -d
+
+# Terminal 2 — Backend (hot reload via nodemon)
+npm run dev
+
+# Terminal 3 — Frontend (Vite HMR)
+cd frontend && npm run dev
 ```
 
-**Enums:**
+> The recommended local setup runs only the database in Docker to get hot reload on both backend and frontend. See `.env.example` for the `DATABASE_URL` pointing to `localhost:5433`.
 
-| Enum | Values |
-|------|--------|
-| `TournamentStatus` | `DRAFT`, `OPEN`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED` |
-| `TournamentFormat` | `SINGLE_ELIM`, `ROUND_ROBIN`, `DOUBLE_ELIM` |
-| `MatchStatus` | `PENDING`, `READY`, `COMPLETED`, `BYE` |
-| `CompetitorType` | `PLAYER`, `TEAM` |
+### Database
 
----
-
-## Seeding (SINGLE_ELIM)
-
-Seeds follow the standard sports bracket placement (ATP / Grand Slam):
-
-- **Seed 1** → position 0
-- **Seed 2** → position N-1 (opposite half)
-- **Seeds 3–4** → quarter positions (randomized between them)
-- **Unseeded** → remaining slots (Fisher-Yates shuffle)
-
-Seed 1 and Seed 2 can only meet in the final.
+```bash
+npm run db:migrate     # Run migrations
+npm run db:generate    # Regenerate Prisma client
+npm run db:studio      # Open Prisma Studio (visual DB browser)
+```
 
 ---
 
 ## Pagination
 
-Endpoints that support pagination return:
+All list endpoints support pagination and return a consistent envelope:
 
 ```json
 {
@@ -233,13 +269,13 @@ Endpoints that support pagination return:
 }
 ```
 
-Default: `page=1`, `limit=20`, max `limit=100`.
+Defaults: `page=1`, `limit=20`, maximum `limit=100`.
 
 ---
 
 ## Error Handling
 
-All errors follow a consistent format:
+All errors return a consistent JSON shape:
 
 ```json
 { "error": "Descriptive message" }
@@ -247,9 +283,10 @@ All errors follow a consistent format:
 
 | Status | Cause |
 |--------|-------|
-| `400` | Validation error, invalid state transition |
+| `400` | Validation error, business rule violation |
 | `404` | Resource not found |
-| `409` | Unique constraint violation (duplicate name, seed conflict) |
+| `409` | Conflict (duplicate entry, invalid state transition) |
+| `422` | Unprocessable — data is valid but cannot be processed (e.g. category overlap) |
 | `429` | Rate limit exceeded |
 | `500` | Internal server error |
 
@@ -257,49 +294,26 @@ All errors follow a consistent format:
 
 ## Rate Limiting
 
-| Limiter | Routes | Limit |
-|---------|--------|-------|
+| Limiter | Applied to | Limit |
+|---------|------------|-------|
 | `apiLimiter` | All `/api/*` routes | 100 req / 15 min per IP |
-| `writeLimiter` | `POST /tournaments`, `POST /bracket` | 30 req / 15 min per IP |
+| `writeLimiter` | All write endpoints (`POST`, `PATCH`, `DELETE`) | 30 req / 15 min per IP |
 
 ---
 
 ## Development Scripts
 
 ```bash
-npm run dev          # Start with nodemon (hot reload)
-npm run format       # Format code with Prettier
-npm run db:migrate   # Run Prisma migrations
-npm run db:generate  # Regenerate Prisma client
-npm run db:studio    # Open Prisma Studio (DB GUI)
-```
+# Backend
+npm run dev          # Start API with nodemon (hot reload)
+npm run format       # Format all files with Prettier
+npm run db:migrate   # Create and apply a new migration
+npm run db:generate  # Regenerate Prisma client after schema changes
+npm run db:studio    # Open Prisma Studio
 
----
-
-## Project Structure
-
-```
-src/
-├── index.js                  # Express app entry point
-├── db.js                     # Prisma singleton
-├── router.js                 # Mounts all sub-routers
-├── lib/
-│   ├── AppError.js           # Custom error class
-│   ├── asyncWrap.js          # Async error wrapper
-│   ├── paginate.js           # Pagination helpers
-│   ├── rateLimiter.js        # Rate limit configs
-│   └── validate.js           # Zod validation helper
-├── middleware/
-│   ├── errorHandler.js       # Global error handler
-│   └── notFound.js           # 404 catch-all
-├── competitors/              # CRUD + stats
-├── tournaments/              # CRUD + lifecycle + stats
-├── registrations/            # Register / unregister / seed
-├── bracket/
-│   ├── bracket.service.js    # Bracket generation dispatcher
-│   ├── bracket.utils.js      # Utilities (seeding, rounds)
-│   └── generators/
-│       ├── singleElim.js     # Single elimination algorithm
-│       └── roundRobin.js     # Round robin (circle method)
-└── matches/                  # Results + progression
+# Frontend
+cd frontend
+npm run dev          # Start Vite dev server
+npm run build        # Production build
+npm run lint         # ESLint
 ```

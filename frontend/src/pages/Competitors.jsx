@@ -22,13 +22,22 @@ import ConfirmActionDialog from '@/components/ConfirmActionDialog.jsx';
 import {DataTable} from '@/components/ui/data-table.jsx';
 import {Search, Users, ChevronLeft, ChevronRight} from 'lucide-react';
 import {ToggleGroup, ToggleGroupItem} from '@/components/ui/toggle-group.jsx';
+import {Badge} from '@/components/ui/badge.jsx';
 
 const PAGE_SIZE = 10;
+
+const GENDER_LABELS = { MALE: 'M', FEMALE: 'F', MIXED: 'MX' };
+const GENDER_VARIANTS = { MALE: 'secondary', FEMALE: 'outline', MIXED: 'default' };
+
+const GenderBadge = ({ gender }) => {
+  if (!gender) return <span className="text-muted-foreground">—</span>;
+  return <Badge variant={GENDER_VARIANTS[gender]}>{GENDER_LABELS[gender]}</Badge>;
+};
 
 const Competitors = () => {
 
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', type: 'PLAYER' });
+  const [formData, setFormData] = useState({ name: '', type: 'PLAYER', gender: '', birthYear: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -43,7 +52,7 @@ const Competitors = () => {
   useEffect(() => { setPage(1); }, [debouncedSearch, filterType]);
 
   const clearData = () => {
-    setFormData({ name: '', type: 'PLAYER' });
+    setFormData({ name: '', type: 'PLAYER', gender: '', birthYear: '' });
     setOpen(false);
   };
 
@@ -80,7 +89,13 @@ const Competitors = () => {
     e.preventDefault();
     const name = formData.name.trim();
     if (!name) return;
-    createMutation.mutate({...formData, name});
+    const payload = {
+      name,
+      type: formData.type || undefined,
+      gender: formData.gender || undefined,
+      birthYear: formData.birthYear ? parseInt(formData.birthYear, 10) : undefined,
+    };
+    createMutation.mutate(payload);
   };
 
   const competitors = getCompetitors.data?.data || [];
@@ -98,6 +113,18 @@ const Competitors = () => {
       header: 'Type',
       enableSorting: false,
       cell: ({ row }) => <CompetitorTypeBadge type={row.original.type} />,
+    },
+    {
+      accessorKey: 'gender',
+      header: 'Genre',
+      enableSorting: false,
+      cell: ({ row }) => <GenderBadge gender={row.original.gender} />,
+    },
+    {
+      accessorKey: 'birthYear',
+      header: 'Année de naissance',
+      enableSorting: false,
+      cell: ({ row }) => row.original.birthYear ?? <span className="text-muted-foreground">—</span>,
     },
     {
       accessorKey: 'createdAt',
@@ -161,6 +188,30 @@ const Competitors = () => {
                 <Input id="fullname" name="fullname" placeholder="Chokri K" value={formData.name}
                        maxLength={100} required
                        onChange={(e) => setFormData({...formData, name: e.target.value})}/>
+              </Field>
+              <Field>
+                <Label htmlFor="gender">Genre</Label>
+                <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v})}>
+                  <SelectTrigger id="gender">
+                    <SelectValue placeholder="Sélectionner…"/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MALE">Masculin</SelectItem>
+                    <SelectItem value="FEMALE">Féminin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <Label htmlFor="birthYear">Année de naissance</Label>
+                <Input
+                  id="birthYear"
+                  type="number"
+                  placeholder="ex: 2005"
+                  min={1900}
+                  max={new Date().getFullYear()}
+                  value={formData.birthYear}
+                  onChange={(e) => setFormData({...formData, birthYear: e.target.value})}
+                />
               </Field>
               <Field>
                 <Label htmlFor="type">Type</Label>
