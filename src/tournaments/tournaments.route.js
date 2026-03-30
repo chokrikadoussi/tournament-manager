@@ -18,6 +18,7 @@ router.delete('/:id', writeLimiter, asyncWrap(controller.deleteById));
 router.post('/:id/open', writeLimiter, asyncWrap(controller.openTournament));
 router.post('/:id/close-registration', writeLimiter, asyncWrap(controller.closeRegistration));
 router.post('/:id/cancel', writeLimiter, asyncWrap(controller.cancelTournament));
+router.post('/:id/start', writeLimiter, asyncWrap(controller.bulkStartCategories));
 router.get('/:id/stats', asyncWrap(controller.getStats));
 
 router.use('/:id/registrations', registrationRouter);

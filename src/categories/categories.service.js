@@ -242,6 +242,41 @@ export const startCategory = async (tournamentId, categoryId) => {
   return prisma.category.findUnique({ where: { id: categoryId } });
 };
 
+export const bulkStart = async (tournamentId) => {
+  const tournament = await tournamentService.getById(tournamentId);
+
+  if (
+    tournament.status !== TournamentStatus.OPEN &&
+    tournament.status !== TournamentStatus.IN_PROGRESS
+  ) {
+    throw new AppError(
+      'Le tournoi doit être ouvert ou en cours pour démarrer les catégories',
+      409,
+    );
+  }
+
+  const openCategories = await prisma.category.findMany({
+    where: { tournamentId, status: TournamentStatus.OPEN },
+  });
+
+  if (openCategories.length === 0) {
+    throw new AppError('Aucune catégorie ouverte à démarrer', 400);
+  }
+
+  const results = { started: [], failed: [] };
+
+  for (const category of openCategories) {
+    try {
+      await startCategory(tournamentId, category.id);
+      results.started.push({ id: category.id, name: category.name });
+    } catch (err) {
+      results.failed.push({ id: category.id, name: category.name, reason: err.message });
+    }
+  }
+
+  return results;
+};
+
 export const cancelCategory = async (tournamentId, categoryId) => {
   await tournamentService.getById(tournamentId);
 

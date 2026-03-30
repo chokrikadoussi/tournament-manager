@@ -1,4 +1,5 @@
 import * as service from './tournaments.service.js';
+import * as categoriesService from '../categories/categories.service.js';
 import {
   TournamentFormat,
   TournamentStatus,
@@ -88,4 +89,10 @@ export const getStats = async (req, res) => {
   const { id } = req.params;
   const stats = await service.getStatsById(id);
   res.json(stats);
+};
+
+export const bulkStartCategories = async (req, res) => {
+  const { id } = req.params;
+  const results = await categoriesService.bulkStart(id);
+  res.json(results);
 };
