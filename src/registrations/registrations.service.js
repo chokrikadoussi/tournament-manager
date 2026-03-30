@@ -125,7 +125,12 @@ export const unregister = async (tournamentId, competitorId) => {
   });
 };
 
-export const updateSeed = async (tournamentId, competitorId, seed) => {
+export const updateSeed = async (
+  tournamentId,
+  competitorId,
+  seed,
+  categoryId,
+) => {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
   });
@@ -163,9 +168,27 @@ export const updateSeed = async (tournamentId, competitorId, seed) => {
     }
   }
 
+  if (categoryId) {
+    const category = await prisma.category.findFirst({
+      where: { id: categoryId, tournamentId },
+    });
+
+    if (!category) {
+      throw new AppError('Category not found', 404);
+    }
+
+    if (category.status !== TournamentStatus.OPEN) {
+      throw new AppError('Cannot assign a category that is not open', 400);
+    }
+  }
+
+  const updateData = {};
+  if (seed !== undefined) updateData.seed = seed;
+  if (categoryId !== undefined) updateData.categoryId = categoryId;
+
   return await prisma.tournamentRegistration.update({
     where: { tournamentId_competitorId: { tournamentId, competitorId } },
-    data: { seed },
+    data: updateData,
     include: { competitor: true },
   });
 };
