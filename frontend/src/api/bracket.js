@@ -1,7 +1,8 @@
-import {api} from './axios.js';
+import { api } from './axios.js';
 
-const getBracket = (tournamentId) => {
-  return api.get(`/tournaments/${tournamentId}/bracket`);
-}
+const getBracket = (tournamentId, categoryId) => {
+  const params = categoryId ? { categoryId } : {};
+  return api.get(`/tournaments/${tournamentId}/bracket`, { params });
+};
 
-export default {getBracket};
+export default { getBracket };

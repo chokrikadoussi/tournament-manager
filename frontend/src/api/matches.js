@@ -1,11 +1,11 @@
-import {api} from './axios.js';
+import { api } from './axios.js';
 
-const getByTournament = (tournamentId, round) => {
-  return api.get(`/tournaments/${tournamentId}/matches?round=${round}`);
-}
-
-const recordResult = (tournamentId, matchId, winnerId) => {
-  return api.post(`/tournaments/${tournamentId}/matches/${matchId}/result`, {winnerId});
+const getByTournament = (tournamentId, round, categoryId) => {
+  const params = { round, ...(categoryId && { categoryId }) };
+  return api.get(`/tournaments/${tournamentId}/matches`, { params });
 };
 
-export default {getByTournament, recordResult};
+const recordResult = (tournamentId, matchId, winnerId) =>
+  api.post(`/tournaments/${tournamentId}/matches/${matchId}/result`, { winnerId });
+
+export default { getByTournament, recordResult };
