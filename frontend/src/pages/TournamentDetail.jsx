@@ -1,8 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import tournamentsApi from '@/api/tournaments.js';
-import registrationsApi from '@/api/registrations.js';
-import competitorsApi from '@/api/competitors.js';
 import bracketApi from '@/api/bracket.js';
 import matchesApi from '@/api/matches.js';
 import { queryClient } from '@/main.jsx';
@@ -10,14 +8,10 @@ import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table.jsx';
 import ConfirmActionDialog from '@/components/ConfirmActionDialog.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { Input } from '@/components/ui/input.jsx';
 import TableSkeleton from '@/components/TableSkeleton.jsx';
 import CompetitorTypeBadge from '@/components/CompetitorTypeBadge.jsx';
 import TournamentStatusBadge from '@/components/TournamentStatusBadge.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
-import {
-  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
-} from '@/components/ui/select.jsx';
 import { toastSuccess, toastError } from '@/lib/toast.js';
 import BracketView from '@/components/BracketView.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
@@ -32,6 +26,7 @@ import {
 } from '@/components/ui/breadcrumb.jsx';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs.jsx';
 import CategoriesTab from '@/pages/tabs/CategoriesTab.jsx';
+import InscriptionsTab from '@/pages/tabs/InscriptionsTab.jsx';
 
 const MATCH_STATUS_CONFIG = {
   PENDING:  { label: 'En attente', className: 'bg-muted text-muted-foreground hover:bg-muted' },
@@ -51,7 +46,6 @@ const TournamentDetail = () => {
   const [currentRound, setCurrentRound] = useState(1);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [pendingResult, setPendingResult] = useState(null);
-  const [selectedCompetitorId, setSelectedCompetitorId] = useState('');
 
   const getTournament = useQuery({
     queryKey: ['tournament', tournamentId],
@@ -63,11 +57,6 @@ const TournamentDetail = () => {
   const getRegistrations = useQuery({
     queryKey: ['tournament', tournamentId, 'registrations'],
     queryFn: () => registrationsApi.getAll(tournamentId),
-  });
-
-  const getCompetitors = useQuery({
-    queryKey: ['competitors'],
-    queryFn: () => competitorsApi.getAll({ limit: 100 }),
   });
 
   const getBracket = useQuery({
@@ -83,8 +72,6 @@ const TournamentDetail = () => {
   });
 
   const registrations = getRegistrations.data || [];
-  const competitors = getCompetitors.data?.data || [];
-  const competitorsNotInTournament = competitors.filter((c) => !registrations.some((r) => r.competitor.id === c.id));
   const bracket = ['IN_PROGRESS', 'COMPLETED'].includes(tournament?.status) ? getBracket.data : null;
   const currentRoundMatches = getBracketRound.data || [];
 
@@ -117,18 +104,6 @@ const TournamentDetail = () => {
     onError: (error) => toastError(error.error || 'Erreur lors du démarrage du tournoi'),
   });
 
-  const registerMutation = useMutation({
-    mutationFn: ({ tournamentId, competitorId }) => registrationsApi.register(tournamentId, competitorId),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'registrations'] }); setSelectedCompetitorId(''); toastSuccess('Compétiteur inscrit'); },
-    onError: (error) => toastError(error.error || "Erreur lors de l'inscription du compétiteur"),
-  });
-
-  const unregisterMutation = useMutation({
-    mutationFn: ({ tournamentId, competitorId }) => registrationsApi.unregister(tournamentId, competitorId),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'registrations'] }); toastSuccess('Compétiteur désinscrit'); },
-    onError: (error) => toastError(error.error || 'Erreur lors de la désinscription du compétiteur'),
-  });
-
   const recordResultMutation = useMutation({
     mutationFn: ({ matchId, winnerId }) => matchesApi.recordResult(tournamentId, matchId, winnerId),
     onSuccess: () => {
@@ -140,32 +115,9 @@ const TournamentDetail = () => {
     onError: (error) => toastError(error.error || "Erreur lors de l'enregistrement du résultat"),
   });
 
-  const setSeedMutation = useMutation({
-    mutationFn: ({ competitorId, seed }) => registrationsApi.setSeed(tournamentId, competitorId, seed),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'registrations'] }); toastSuccess('Classement mis à jour'); },
-    onError: (error) => toastError(error.error || 'Erreur lors de la mise à jour du classement'),
-  });
-
   const handleInscriptions = (action) => {
     if (action === 'open') openInscriptionsMutation.mutate(tournamentId);
     else if (action === 'close') closeInscriptionsMutation.mutate(tournamentId);
-  };
-
-  const handleCompetitorRegistration = (e) => {
-    e.preventDefault();
-    registerMutation.mutate({ tournamentId, competitorId: selectedCompetitorId });
-  };
-
-  const handleSeedChange = (e, competitorId) => {
-    const val = e.target.value;
-    if (val) {
-      const parsed = parseInt(val);
-      if (isNaN(parsed) || parsed < 1 || parsed > 999) {
-        toastError('Le classement doit être un entier entre 1 et 999.');
-        return;
-      }
-    }
-    setSeedMutation.mutate({ competitorId, seed: val ? parseInt(val) : null });
   };
 
   if (getTournament.isLoading) return <TableSkeleton cols={5} />;
@@ -259,78 +211,8 @@ const TournamentDetail = () => {
         </TabsContent>
 
         {/* ── INSCRIPTIONS ── */}
-        <TabsContent value="inscriptions" className="space-y-4 mt-4">
-          {tournament.status === 'OPEN' && (
-            <Card>
-              <CardHeader><CardTitle>Inscrire un combattant</CardTitle></CardHeader>
-              {competitorsNotInTournament.length === 0 ? (
-                <p className="px-6 pb-4">Aucun combattant disponible. Ajoutez des compétiteurs avant de les inscrire.</p>
-              ) : (
-                <form onSubmit={handleCompetitorRegistration} className="px-6 pb-4 flex gap-2">
-                  <Select value={selectedCompetitorId} onValueChange={setSelectedCompetitorId}>
-                    <SelectTrigger><SelectValue placeholder="Choisir un combattant…" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Joueur</SelectLabel>
-                        {competitorsNotInTournament.filter((c) => c.type === 'PLAYER').map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                      <SelectGroup>
-                        <SelectLabel>Equipe</SelectLabel>
-                        {competitorsNotInTournament.filter((c) => c.type === 'TEAM').map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <Button type="submit" disabled={!selectedCompetitorId}>Inscrire</Button>
-                </form>
-              )}
-            </Card>
-          )}
-
-          {getRegistrations.isLoading ? <TableSkeleton rows={3} cols={5} /> : registrations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune inscription trouvée.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Classement</TableHead>
-                  <TableHead>Enregistré le</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {registrations.map((reg) => (
-                  <TableRow key={reg.id}>
-                    <TableCell>{reg.competitor.name}</TableCell>
-                    <TableCell><CompetitorTypeBadge type={reg.competitor.type} /></TableCell>
-                    <TableCell>
-                      <Input key={reg.id + '-' + (reg.seed ?? 'null')} type="number"
-                        defaultValue={reg.seed || ''}
-                        onBlur={(e) => handleSeedChange(e, reg.competitor.id)} />
-                    </TableCell>
-                    <TableCell>{reg.createdAt}</TableCell>
-                    <TableCell>
-                      {tournament.status === 'OPEN' && (
-                        <ConfirmActionDialog
-                          trigger={<Button variant="destructive">Désinscrire</Button>}
-                          title="Désinscrire le compétiteur ?"
-                          description="Cette action est irréversible et supprimera les données d'inscription associées."
-                          confirmLabel="Désinscrire"
-                          confirmVariant="destructive"
-                          onConfirm={() => unregisterMutation.mutate({ tournamentId, competitorId: reg.competitor.id })}
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+        <TabsContent value="inscriptions" className="mt-4">
+          <InscriptionsTab tournamentId={tournamentId} tournamentStatus={tournament.status} />
         </TabsContent>
 
         {/* ── BRACKETS ── */}
