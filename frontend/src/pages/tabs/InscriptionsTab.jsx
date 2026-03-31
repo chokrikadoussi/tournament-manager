@@ -278,6 +278,7 @@ const InscriptionsTab = ({tournamentId, tournamentStatus}) => {
                         confirmLabel="Désinscrire"
                         confirmVariant="destructive"
                         onConfirm={() => unregisterMutation.mutate(c.id)}
+                        isLoading={unregisterMutation.isPending}
                       />
                     )}
                   </td>

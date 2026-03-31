@@ -291,6 +291,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
                           confirmLabel="Supprimer"
                           confirmVariant="destructive"
                           onConfirm={() => deleteMutation.mutate(cat.id)}
+                          isLoading={deleteMutation.isPending}
                         />
                       </>
                     )}
@@ -304,6 +305,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
                             description="Le bracket sera généré pour cette catégorie. Cette action est irréversible."
                             confirmLabel="Démarrer"
                             onConfirm={() => startMutation.mutate(cat.id)}
+                            isLoading={startMutation.isPending}
                           />
                         )}
                         <Button size="sm" variant="outline" onClick={() => closeMutation.mutate(cat.id)}
@@ -318,6 +320,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
                           confirmLabel="Annuler la catégorie"
                           confirmVariant="destructive"
                           onConfirm={() => cancelMutation.mutate(cat.id)}
+                          isLoading={cancelMutation.isPending}
                         />
                       </>
                     )}

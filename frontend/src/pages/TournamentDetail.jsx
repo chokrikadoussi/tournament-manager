@@ -121,6 +121,7 @@ const TournamentDetail = () => {
                     description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
                     confirmLabel="Démarrer"
                     onConfirm={() => startTournamentMutation.mutate(tournamentId)}
+                    isLoading={startTournamentMutation.isPending}
                   />
                 )}
               </>
@@ -137,6 +138,7 @@ const TournamentDetail = () => {
                     description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
                     confirmLabel="Démarrer"
                     onConfirm={() => startTournamentMutation.mutate(tournamentId)}
+                    isLoading={startTournamentMutation.isPending}
                   />
                 )}
               </>
