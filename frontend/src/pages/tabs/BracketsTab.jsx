@@ -75,7 +75,7 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
       setSelectedMatch(null);
       setPendingResult(null);
       queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'bracket'] });
-      queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] });
+      queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId], exact: true });
       toastSuccess('Résultat enregistré');
     },
     onError: (e) => toastError(e.error || "Erreur lors de l'enregistrement du résultat"),
