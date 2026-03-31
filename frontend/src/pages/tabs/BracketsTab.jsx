@@ -118,6 +118,13 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
         </div>
       )}
 
+      {/* État vide — aucune catégorie démarrée */}
+      {startedCategories.length === 0 && (
+        <p className="text-sm text-muted-foreground py-2">
+          Aucune catégorie démarrée — utilisez <strong>Démarrer</strong> dans l'onglet Général.
+        </p>
+      )}
+
       {/* Champion */}
       {champion && (
         <Card className="border-primary/30 bg-primary/5">
@@ -139,6 +146,13 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
         <p className="text-sm text-destructive">Impossible de charger le bracket.</p>
       )}
 
+      {/* État vide — bracket chargé mais vide */}
+      {startedCategories.length > 0 && !getBracket.isLoading && !getBracket.isError && totalRounds === 0 && (
+        <p className="text-sm text-muted-foreground py-2">
+          Bracket non disponible pour cette catégorie.
+        </p>
+      )}
+
       {/* Navigation rounds */}
       {totalRounds > 0 && (
         <div className="flex gap-2 flex-wrap">
@@ -157,7 +171,7 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
 
       {/* Table des matchs */}
       {currentRoundMatches.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
