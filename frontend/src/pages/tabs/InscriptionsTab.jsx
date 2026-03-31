@@ -92,14 +92,17 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
 
   const handleSeedChange = (e, competitorId) => {
     const val = e.target.value;
-    if (val) {
-      const parsed = parseInt(val, 10);
-      if (isNaN(parsed) || parsed < 1 || parsed > 999) {
-        toastError('Le classement doit être un entier entre 1 et 999.');
-        return;
-      }
+    const parsed = val ? parseInt(val, 10) : null;
+
+    if (val && (isNaN(parsed) || parsed < 1 || parsed > 999)) {
+      toastError('Le classement doit être un entier entre 1 et 999.');
+      return;
     }
-    setSeedMutation.mutate({ competitorId, seed: val ? parseInt(val, 10) : null });
+
+    const currentSeed = registrations.find(r => r.competitor.id === competitorId)?.seed ?? null;
+    if (parsed === currentSeed) return;
+
+    setSeedMutation.mutate({ competitorId, seed: parsed });
   };
 
   const handleCategoryChange = (competitorId, categoryId) => {
