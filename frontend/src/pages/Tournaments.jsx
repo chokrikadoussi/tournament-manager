@@ -22,7 +22,7 @@ import {Skeleton} from "@/components/ui/skeleton.jsx";
 import TournamentStatusBadge from "@/components/TournamentStatusBadge.jsx";
 import {Calendar, User, Trophy} from "lucide-react";
 import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group.jsx";
-import {toastError} from "@/lib/toast.js";
+import {toastError, toastSuccess} from "@/lib/toast.js";
 
 const STATUS_LABELS = {
   ALL: 'Tous',
@@ -61,6 +61,7 @@ const Tournaments = () => {
     mutationFn: (data) => tournamentsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['tournaments']});
+      toastSuccess('Tournoi créé avec succès');
       clearData();
     },
     onError: (error) => {
@@ -157,7 +158,7 @@ const Tournaments = () => {
               <DialogClose asChild>
                 <Button variant="outline" type="reset" onClick={() => clearData()}>Annuler</Button>
               </DialogClose>
-              <Button type="submit">Créer</Button>
+              <Button type="submit" disabled={createMutation.isPending}>Créer</Button>
             </DialogFooter>
           </form>
         </DialogContent>
