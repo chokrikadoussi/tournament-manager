@@ -13,6 +13,7 @@ const ConfirmActionDialog = ({
   confirmLabel = 'Confirmer',
   confirmVariant = 'default',
   onConfirm,
+  isLoading = false,
 }) => (
   <AlertDialog>
     <AlertDialogTrigger asChild>
@@ -25,7 +26,7 @@ const ConfirmActionDialog = ({
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>Annuler</AlertDialogCancel>
-        <Button variant={confirmVariant} onClick={onConfirm}>{confirmLabel}</Button>
+        <Button variant={confirmVariant} onClick={onConfirm} disabled={isLoading}>{confirmLabel}</Button>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

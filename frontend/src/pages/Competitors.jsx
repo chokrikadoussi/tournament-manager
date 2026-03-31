@@ -82,6 +82,10 @@ const Competitors = () => {
     mutationFn: (id) => competitorsApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      toastSuccess('Compétiteur supprimé');
+    },
+    onError: (error) => {
+      toastError(error.error || 'Erreur lors de la suppression');
     },
   });
 
