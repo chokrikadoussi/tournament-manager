@@ -1,22 +1,27 @@
-import { useParams, Link } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import {useParams, Link} from 'react-router-dom';
+import {useMutation, useQuery} from '@tanstack/react-query';
 import tournamentsApi from '@/api/tournaments.js';
 import registrationsApi from '@/api/registrations.js';
-import { queryClient } from '@/main.jsx';
+import {queryClient} from '@/main.jsx';
 import ConfirmActionDialog from '@/components/ConfirmActionDialog.jsx';
-import { Button } from '@/components/ui/button.jsx';
+import {Button} from '@/components/ui/button.jsx';
 import TableSkeleton from '@/components/TableSkeleton.jsx';
 import TournamentStatusBadge from '@/components/TournamentStatusBadge.jsx';
-import { toastSuccess, toastError } from '@/lib/toast.js';
+import {toastSuccess, toastError} from '@/lib/toast.js';
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
   BreadcrumbPage, BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb.jsx';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs.jsx';
+import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs.jsx';
 import CategoriesTab from '@/pages/tabs/CategoriesTab.jsx';
 import InscriptionsTab from '@/pages/tabs/InscriptionsTab.jsx';
 import BracketsTab from '@/pages/tabs/BracketsTab.jsx';
 
+const FORMAT_LABELS = {
+  SINGLE_ELIM: 'Élimination directe',
+  ROUND_ROBIN: 'Mélée générale',
+  DOUBLE_ELIM: 'Double élimination'
+};
 
 const TournamentDetail = () => {
   const tournamentId = useParams().id;
@@ -38,19 +43,28 @@ const TournamentDetail = () => {
   // Mutations
   const openInscriptionsMutation = useMutation({
     mutationFn: (id) => tournamentsApi.openInscriptions(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] }); toastSuccess('Inscriptions ouvertes'); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
+      toastSuccess('Inscriptions ouvertes');
+    },
     onError: (error) => toastError(error.error || "Erreur lors de l'ouverture des inscriptions"),
   });
 
   const closeInscriptionsMutation = useMutation({
     mutationFn: (id) => tournamentsApi.closeInscriptions(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] }); toastSuccess('Inscriptions clôturées'); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
+      toastSuccess('Inscriptions clôturées');
+    },
     onError: (error) => toastError(error.error || 'Erreur lors de la clôture des inscriptions'),
   });
 
   const startTournamentMutation = useMutation({
     mutationFn: (id) => tournamentsApi.startTournament(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] }); toastSuccess('Tournoi démarré'); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
+      toastSuccess('Tournoi démarré');
+    },
     onError: (error) => toastError(error.error || 'Erreur lors du démarrage du tournoi'),
   });
 
@@ -59,26 +73,29 @@ const TournamentDetail = () => {
     else if (action === 'close') closeInscriptionsMutation.mutate(tournamentId);
   };
 
-  if (getTournament.isLoading) return <TableSkeleton cols={5} />;
+  if (getTournament.isLoading) return <TableSkeleton cols={5}/>;
   if (getTournament.isError) return <p className="text-sm text-destructive">Impossible de charger le tournoi.</p>;
+
+  if (!tournament) return null;
 
   return (
     <div className="tournament-detail">
-      {tournament && (
+
         <Breadcrumb className="text-sm text-muted-foreground mb-4">
           <BreadcrumbList>
             <BreadcrumbItem><BreadcrumbLink asChild><Link to="/">Accueil</Link></BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink asChild><Link to="/tournaments">Tournois</Link></BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
+            <BreadcrumbSeparator/>
+            <BreadcrumbItem><BreadcrumbLink asChild><Link
+              to="/tournaments">Tournois</Link></BreadcrumbLink></BreadcrumbItem>
+            <BreadcrumbSeparator/>
             <BreadcrumbItem><BreadcrumbPage>{tournament.name}</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-      )}
+
 
       <div className="flex items-center gap-3 mb-4">
         <h1>{tournament.name}</h1>
-        <TournamentStatusBadge status={tournament.status} />
+        <TournamentStatusBadge status={tournament.status}/>
       </div>
 
       <Tabs defaultValue="general">
@@ -126,20 +143,23 @@ const TournamentDetail = () => {
             )}
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 text-sm">
-            <div><span className="text-muted-foreground">Format</span><p className="font-medium mt-0.5">{tournament.format}</p></div>
-            <div><span className="text-muted-foreground">Sport</span><p className="font-medium mt-0.5">{tournament.sport || '—'}</p></div>
-            <div><span className="text-muted-foreground">Inscrits</span><p className="font-medium mt-0.5">{tournament._count?.registrations ?? 0}</p></div>
+            <div><span className="text-muted-foreground">Format</span><p
+              className="font-medium mt-0.5">{FORMAT_LABELS[tournament.format] ?? tournament.format}</p></div>
+            <div><span className="text-muted-foreground">Sport</span><p
+              className="font-medium mt-0.5">{tournament.sport || '—'}</p></div>
+            <div><span className="text-muted-foreground">Inscrits</span><p
+              className="font-medium mt-0.5">{tournament._count?.registrations ?? 0}</p></div>
           </div>
         </TabsContent>
 
         {/* ── CATÉGORIES ── */}
         <TabsContent value="categories" className="mt-4">
-          <CategoriesTab tournamentId={tournamentId} tournamentStatus={tournament.status} />
+          <CategoriesTab tournamentId={tournamentId} tournamentStatus={tournament.status}/>
         </TabsContent>
 
         {/* ── INSCRIPTIONS ── */}
         <TabsContent value="inscriptions" className="mt-4">
-          <InscriptionsTab tournamentId={tournamentId} tournamentStatus={tournament.status} />
+          <InscriptionsTab tournamentId={tournamentId} tournamentStatus={tournament.status}/>
         </TabsContent>
 
         {/* ── BRACKETS ── */}
