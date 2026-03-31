@@ -147,7 +147,7 @@ const Competitors = () => {
         />
       ),
     },
-  ], [deleteMutation]);
+  ], [deleteMutation.mutate]);
 
   const emptyState = hasActiveFilters ? (
     <div className="flex flex-col items-center gap-3 text-muted-foreground">
