@@ -15,5 +15,6 @@ router.post('/:categoryId/open', writeLimiter, asyncWrap(controller.openCategory
 router.post('/:categoryId/close', writeLimiter, asyncWrap(controller.closeCategory));
 router.post('/:categoryId/start', writeLimiter, asyncWrap(controller.startCategory));
 router.post('/:categoryId/cancel', writeLimiter, asyncWrap(controller.cancelCategory));
+router.post('/:categoryId/reset', writeLimiter, asyncWrap(controller.resetCategory));
 
 export default router;

@@ -26,6 +26,7 @@ export const getAll = async (limit, skip, status, sport) => {
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip,
+      include: { _count: { select: { registrations: true } } },
     }),
     prisma.tournament.count({ where }),
   ]);
@@ -66,7 +67,15 @@ export const deleteById = async (id) => {
       400,
     );
   }
-  await prisma.tournament.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    // Clear self-referential FK on Match before deleting matches
+    await tx.match.updateMany({ where: { tournamentId: id }, data: { nextMatchId: null } });
+    await tx.matchParticipant.deleteMany({ where: { match: { tournamentId: id } } });
+    await tx.match.deleteMany({ where: { tournamentId: id } });
+    await tx.tournamentRegistration.deleteMany({ where: { tournamentId: id } });
+    await tx.category.deleteMany({ where: { tournamentId: id } });
+    await tx.tournament.delete({ where: { id } });
+  });
 };
 
 export const transitionStatus = async (id, newStatus) => {

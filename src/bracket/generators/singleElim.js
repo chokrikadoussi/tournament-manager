@@ -133,6 +133,25 @@ export async function generateSingleElim(
 
 async function propagateBye(tx, match, participants) {
   if (participants.length === 1 && match.nextMatchId) {
+    // Round 2+ : ne propager que si le slot manquant provient d'un match BYE
+    // (i.e. son "feeder" du round précédent n'avait aucun participant).
+    // Si le feeder est un vrai match encore non joué, on attend son résultat.
+    if (match.round > 1) {
+      const presentSlot = participants[0].slot;
+      const missingSlot  = 1 - presentSlot;
+      const feederPosition = match.position * 2 + missingSlot;
+      const feeder = await tx.match.findFirst({
+        where: {
+          tournamentId: match.tournamentId,
+          round: match.round - 1,
+          position: feederPosition,
+          categoryId: match.categoryId,
+        },
+        select: { status: true },
+      });
+      if (feeder?.status !== MatchStatus.BYE) return;
+    }
+
     const winner = participants[0];
     await tx.match.update({
       where: { id: match.id },
@@ -166,11 +185,10 @@ async function propagateBye(tx, match, participants) {
 }
 
 const buildSeededOrder = (participants, registrations) => {
-  // registrations = [{ competitorId, seed }]
   const bracketSize = nextPowerOfTwo(participants.length);
+  const numByes = bracketSize - participants.length;
   const slots = new Array(bracketSize).fill(null);
 
-  // 1. Trier les seedés (asc), shuffler les non-seedés
   const seeded = registrations
     .filter((r) => r.seed !== null)
     .sort((a, b) => a.seed - b.seed);
@@ -179,18 +197,30 @@ const buildSeededOrder = (participants, registrations) => {
     registrations.filter((r) => r.seed === null).map((r) => r.competitorId),
   );
 
-  // 2. Placer les seedés aux positions réservées
+  // 1. Placer les seedés aux positions réservées
   const seedPositions = getSeedPositions(bracketSize);
   seeded.forEach((reg, i) => {
-    if (seedPositions[i] !== undefined)
-      slots[seedPositions[i]] = reg.competitorId;
+    if (seedPositions[i] !== undefined) slots[seedPositions[i]] = reg.competitorId;
   });
 
-  // 3. Remplir les slots vides avec les non-seedés
+  // 2. Distribuer les BYEs en face des meilleures positions de seed (slot ^ 1),
+  //    dans l'ordre de priorité seed. Cela protège les têtes de série
+  //    et répartit les BYEs sur les deux moitiés du bracket.
+  let byesPlaced = 0;
+  for (let i = 0; i < seedPositions.length && byesPlaced < numByes; i++) {
+    const opponentSlot = seedPositions[i] ^ 1;
+    if (slots[opponentSlot] === null) {
+      slots[opponentSlot] = 'BYE';
+      byesPlaced++;
+    }
+  }
+
+  // 3. Remplir les slots vides restants avec les non-seedés
   let u = 0;
   for (let i = 0; i < bracketSize; i++) {
     if (slots[i] === null && u < unseeded.length) slots[i] = unseeded[u++];
   }
 
-  return slots; // array de bracketSize éléments (competitorId | null pour les byes)
+  // 4. Convertir les sentinelles 'BYE' en null (bye réel)
+  return slots.map((s) => (s === 'BYE' ? null : s));
 };

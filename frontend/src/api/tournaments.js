@@ -25,7 +25,11 @@ const closeInscriptions = (id) => {
 }
 
 const startTournament = (id) => {
-  return api.post(`/tournaments/${id}/bracket`);
+  return api.post(`/tournaments/${id}/start`);
 }
 
-export default {getAll, create, remove, getById, openInscriptions, closeInscriptions, startTournament}
+const cancel = (id) => {
+  return api.post(`/tournaments/${id}/cancel`);
+}
+
+export default {getAll, create, remove, getById, openInscriptions, closeInscriptions, startTournament, cancel}

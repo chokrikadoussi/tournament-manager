@@ -54,6 +54,7 @@ enum BracketSide {
 model Competitor {
   id        String         @id @default(cuid())
   name      String
+  club      String?
   type      CompetitorType @default(PLAYER)
   gender    Gender?
   birthYear Int?
@@ -62,6 +63,8 @@ model Competitor {
 
   registrations TournamentRegistration[]
   matchSlots    MatchParticipant[]
+
+  @@unique([name, birthYear], name: "competitor_name_birthYear_key")
 }
 
 model Tournament {

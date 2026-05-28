@@ -83,3 +83,9 @@ export const cancelCategory = async (req, res) => {
   const category = await service.cancelCategory(id, categoryId);
   res.json(category);
 };
+
+export const resetCategory = async (req, res) => {
+  const { id, categoryId } = req.params;
+  const category = await service.resetCategory(id, categoryId);
+  res.json(category);
+};

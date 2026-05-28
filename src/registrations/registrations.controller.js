@@ -1,5 +1,7 @@
 import * as service from './registrations.service.js';
+import * as importService from './registrations.import.service.js';
 import { validate } from '../lib/validate.js';
+import { AppError } from '../lib/AppError.js';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -37,4 +39,22 @@ export const updateSeed = async (req, res) => {
 
   const registration = await service.updateSeed(id, competitorId, seed, categoryId);
   res.json(registration);
+};
+
+const _parseMode = (raw) => (['merge', 'replace'].includes(raw) ? raw : 'merge');
+
+export const importCSV = async (req, res) => {
+  const { id } = req.params;
+  if (!req.file) throw new AppError('Aucun fichier CSV fourni', 400);
+  const mode = _parseMode(req.body?.mode);
+  const report = await importService.importCSV(id, req.file.buffer, mode);
+  res.status(200).json(report);
+};
+
+export const previewImport = async (req, res) => {
+  const { id } = req.params;
+  if (!req.file) throw new AppError('Aucun fichier CSV fourni', 400);
+  const mode = _parseMode(req.body?.mode);
+  const report = await importService.previewCSV(id, req.file.buffer, mode);
+  res.status(200).json(report);
 };
