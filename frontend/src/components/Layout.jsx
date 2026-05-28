@@ -1,8 +1,16 @@
-import {NavLink, Link} from 'react-router-dom';
-import {Trophy, Plus} from 'lucide-react';
-import {Button} from '@/components/ui/button.jsx';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { Trophy, Plus, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button.jsx';
+import { removeToken } from '@/lib/auth.js';
 
-const Layout = ({children}) => {
+const Layout = ({ children }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    removeToken();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-primary/20">
@@ -25,12 +33,17 @@ const Layout = ({children}) => {
               Tournois
             </NavLink>
           </nav>
-          <Button asChild size="sm">
-            <Link to="/tournaments?new=1">
-              <Plus className="h-4 w-4 mr-1.5" />
-              Nouveau tournoi
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm">
+              <Link to="/tournaments?new=1">
+                <Plus className="h-4 w-4 mr-1.5" />
+                Nouveau tournoi
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout} title="Se déconnecter">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
       <main className="container mx-auto px-4 py-6 flex-1">

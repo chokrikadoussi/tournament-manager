@@ -15,6 +15,11 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+if (!process.env.ADMIN_USER || !process.env.ADMIN_PASSWORD || !process.env.JWT_SECRET) {
+  logger.error('FATAL: ADMIN_USER, ADMIN_PASSWORD and JWT_SECRET must be set');
+  process.exit(1);
+}
+
 if (!process.env.NODE_ENV) {
   logger.warn("NODE_ENV non défini, utilisation de 'development' par défaut");
 }
