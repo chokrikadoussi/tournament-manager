@@ -17,6 +17,7 @@ const createSchema = z.object({
   type: z.enum(VALID_TYPES).optional(),
   gender: z.enum(VALID_GENDERS).optional(),
   birthYear: z.number().int().min(1900).max(new Date().getFullYear()).optional(),
+  club: z.string().optional().nullable(),
 });
 
 const updateSchema = z.object({
@@ -24,6 +25,7 @@ const updateSchema = z.object({
   type: z.enum(VALID_TYPES).optional(),
   gender: z.enum(VALID_GENDERS).optional(),
   birthYear: z.number().int().min(1900).max(new Date().getFullYear()).optional(),
+  club: z.string().optional().nullable(),
 });
 
 export const getAll = async (req, res) => {
@@ -35,9 +37,9 @@ export const getAll = async (req, res) => {
 };
 
 export const create = async (req, res) => {
-  const { name, type, gender, birthYear } = validate(createSchema, req.body);
+  const { name, type, gender, birthYear, club } = validate(createSchema, req.body);
 
-  const competitor = await service.create({ name, type, gender, birthYear });
+  const competitor = await service.create({ name, type, gender, birthYear, club });
   res.status(201).json(competitor);
 };
 
@@ -49,9 +51,9 @@ export const getById = async (req, res) => {
 
 export const updateById = async (req, res) => {
   const { id } = req.params;
-  const { name, type, gender, birthYear } = validate(updateSchema, req.body);
+  const { name, type, gender, birthYear, club } = validate(updateSchema, req.body);
 
-  const competitor = await service.updateById(id, { name, type, gender, birthYear });
+  const competitor = await service.updateById(id, { name, type, gender, birthYear, club });
   res.json(competitor);
 };
 

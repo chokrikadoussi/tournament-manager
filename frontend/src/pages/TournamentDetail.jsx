@@ -1,5 +1,6 @@
-import {useParams, Link} from 'react-router-dom';
+import {useParams, Link, useNavigate} from 'react-router-dom';
 import {useMutation, useQuery} from '@tanstack/react-query';
+import {useState} from 'react';
 import tournamentsApi from '@/api/tournaments.js';
 import registrationsApi from '@/api/registrations.js';
 import {queryClient} from '@/main.jsx';
@@ -25,6 +26,8 @@ const FORMAT_LABELS = {
 
 const TournamentDetail = () => {
   const tournamentId = useParams().id;
+  const navigate     = useNavigate();
+  const [activeTab, setActiveTab] = useState('general');
 
   const getTournament = useQuery({
     queryKey: ['tournament', tournamentId],
@@ -68,6 +71,26 @@ const TournamentDetail = () => {
     onError: (error) => toastError(error.error || 'Erreur lors du démarrage du tournoi'),
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: () => tournamentsApi.cancel(tournamentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId]});
+      queryClient.invalidateQueries({queryKey: ['tournaments']});
+      toastSuccess('Tournoi annulé');
+    },
+    onError: (error) => toastError(error.error || "Erreur lors de l'annulation du tournoi"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => tournamentsApi.remove(tournamentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['tournaments']});
+      toastSuccess('Tournoi supprimé');
+      navigate('/tournaments');
+    },
+    onError: (error) => toastError(error.error || 'Erreur lors de la suppression du tournoi'),
+  });
+
   const handleInscriptions = (action) => {
     if (action === 'open') openInscriptionsMutation.mutate(tournamentId);
     else if (action === 'close') closeInscriptionsMutation.mutate(tournamentId);
@@ -98,7 +121,7 @@ const TournamentDetail = () => {
         <TournamentStatusBadge status={tournament.status}/>
       </div>
 
-      <Tabs defaultValue="general">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="categories">Catégories</TabsTrigger>
@@ -108,41 +131,75 @@ const TournamentDetail = () => {
 
         {/* ── GÉNÉRAL ── */}
         <TabsContent value="general" className="space-y-4 mt-4">
-          <div className="flex flex-wrap gap-2">
-            {tournament.status === 'DRAFT' && (
-              <>
-                <Button onClick={() => handleInscriptions('open')} disabled={openInscriptionsMutation.isPending}>
-                  Ouvrir les inscriptions
-                </Button>
-                {registrations.length >= 2 && (
-                  <ConfirmActionDialog
-                    trigger={<Button disabled={startTournamentMutation.isPending}>Démarrer le tournoi</Button>}
-                    title="Démarrer le tournoi ?"
-                    description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
-                    confirmLabel="Démarrer"
-                    onConfirm={() => startTournamentMutation.mutate(tournamentId)}
-                    isLoading={startTournamentMutation.isPending}
-                  />
-                )}
-              </>
-            )}
-            {tournament.status === 'OPEN' && (
-              <>
-                <Button onClick={() => handleInscriptions('close')} disabled={closeInscriptionsMutation.isPending}>
-                  Clôturer les inscriptions
-                </Button>
-                {registrations.length >= 2 && (
-                  <ConfirmActionDialog
-                    trigger={<Button disabled={startTournamentMutation.isPending}>Démarrer le tournoi</Button>}
-                    title="Démarrer le tournoi ?"
-                    description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
-                    confirmLabel="Démarrer"
-                    onConfirm={() => startTournamentMutation.mutate(tournamentId)}
-                    isLoading={startTournamentMutation.isPending}
-                  />
-                )}
-              </>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-2">
+              {tournament.status === 'DRAFT' && (
+                <>
+                  <Button onClick={() => handleInscriptions('open')} disabled={openInscriptionsMutation.isPending}>
+                    Ouvrir les inscriptions
+                  </Button>
+                  {registrations.length >= 2 && (
+                    <ConfirmActionDialog
+                      trigger={<Button disabled={startTournamentMutation.isPending}>Démarrer le tournoi</Button>}
+                      title="Démarrer le tournoi ?"
+                      description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
+                      confirmLabel="Démarrer"
+                      onConfirm={() => startTournamentMutation.mutate(tournamentId)}
+                      isLoading={startTournamentMutation.isPending}
+                    />
+                  )}
+                </>
+              )}
+              {tournament.status === 'OPEN' && (
+                <>
+                  <Button onClick={() => handleInscriptions('close')} disabled={closeInscriptionsMutation.isPending}>
+                    Clôturer les inscriptions
+                  </Button>
+                  {registrations.length >= 2 && (
+                    <ConfirmActionDialog
+                      trigger={<Button disabled={startTournamentMutation.isPending}>Démarrer le tournoi</Button>}
+                      title="Démarrer le tournoi ?"
+                      description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
+                      confirmLabel="Démarrer"
+                      onConfirm={() => startTournamentMutation.mutate(tournamentId)}
+                      isLoading={startTournamentMutation.isPending}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {['DRAFT', 'OPEN', 'IN_PROGRESS'].includes(tournament.status) && (
+                <ConfirmActionDialog
+                  trigger={
+                    <Button variant="outline" size="sm" disabled={cancelMutation.isPending}>
+                      Annuler le tournoi
+                    </Button>
+                  }
+                  title="Annuler le tournoi ?"
+                  description="Le tournoi sera marqué comme annulé. Les inscriptions et brackets sont conservés mais le tournoi ne pourra plus progresser."
+                  confirmLabel="Annuler le tournoi"
+                  confirmVariant="destructive"
+                  onConfirm={() => cancelMutation.mutate()}
+                  isLoading={cancelMutation.isPending}
+                />
+              )}
+              {['DRAFT', 'OPEN'].includes(tournament.status) && (
+                <ConfirmActionDialog
+                  trigger={
+                    <Button variant="destructive" size="sm" disabled={deleteMutation.isPending}>
+                      Supprimer
+                    </Button>
+                  }
+                  title="Supprimer le tournoi ?"
+                  description="Cette action est irréversible. Le tournoi et toutes ses données (inscriptions, catégories) seront définitivement supprimés."
+                  confirmLabel="Supprimer définitivement"
+                  confirmVariant="destructive"
+                  onConfirm={() => deleteMutation.mutate()}
+                  isLoading={deleteMutation.isPending}
+                />
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 text-sm">
             <div><span className="text-muted-foreground">Format</span><p
@@ -170,6 +227,8 @@ const TournamentDetail = () => {
             tournamentId={tournamentId}
             tournamentStatus={tournament.status}
             registrations={registrations}
+            tournamentName={tournament.name}
+            onSwitchTab={setActiveTab}
           />
         </TabsContent>
       </Tabs>

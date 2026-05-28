@@ -292,3 +292,32 @@ export const cancelCategory = async (tournamentId, categoryId) => {
     data: { status: TournamentStatus.CANCELLED },
   });
 };
+
+export const resetCategory = async (tournamentId, categoryId) => {
+  await tournamentService.getById(tournamentId);
+
+  const category = await getCategoryOrThrow(tournamentId, categoryId);
+
+  if (category.status !== TournamentStatus.IN_PROGRESS) {
+    throw new AppError('Seule une catégorie en cours peut être réinitialisée', 409);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.match.updateMany({
+      where: { tournamentId, categoryId },
+      data: { nextMatchId: null },
+    });
+    await tx.matchParticipant.deleteMany({
+      where: { match: { tournamentId, categoryId } },
+    });
+    await tx.match.deleteMany({
+      where: { tournamentId, categoryId },
+    });
+    await tx.category.update({
+      where: { id: categoryId },
+      data: { status: TournamentStatus.OPEN },
+    });
+  });
+
+  return prisma.category.findUnique({ where: { id: categoryId } });
+};

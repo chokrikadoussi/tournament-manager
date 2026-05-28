@@ -24,4 +24,7 @@ const start = (tournamentId, categoryId) =>
 const cancel = (tournamentId, categoryId) =>
   api.post(`/tournaments/${tournamentId}/categories/${categoryId}/cancel`);
 
-export default { getAll, create, update, remove, open, close, start, cancel };
+const reset = (tournamentId, categoryId) =>
+  api.post(`/tournaments/${tournamentId}/categories/${categoryId}/reset`);
+
+export default { getAll, create, update, remove, open, close, start, cancel, reset };

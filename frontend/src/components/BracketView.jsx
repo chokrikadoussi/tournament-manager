@@ -71,7 +71,7 @@ const BracketView = ({bracketMap, totalRounds}) => {
                 >
                   <CardContent className="p-3 flex flex-col gap-1">
                     {[0, 1].map((slot) => {
-                      const p = match.participants[slot];
+                      const p = match.participants.find(pt => pt.slot === slot);
                       const name = p?.competitor?.name;
                       const isBye = p && !name;
                       const isTbd = !p;

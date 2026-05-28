@@ -14,10 +14,15 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog.jsx';
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog.jsx';
+import { Input } from '@/components/ui/input.jsx';
+import { Label } from '@/components/ui/label.jsx';
 import { toastSuccess, toastError } from '@/lib/toast.js';
 import CompetitorTypeBadge from '@/components/CompetitorTypeBadge.jsx';
 import BracketView from '@/components/BracketView.jsx';
-import { Check, Trophy, Pencil } from 'lucide-react';
+import { Check, Trophy, Pencil, FileDown, Medal, Tag, ArrowRight } from 'lucide-react';
 
 const MATCH_STATUS_CONFIG = {
   PENDING:   { label: 'En attente', className: 'bg-muted text-muted-foreground hover:bg-muted' },
@@ -32,11 +37,16 @@ const ROW_CLASS = {
   READY: 'ring-1 ring-inset ring-primary/30 bg-primary/5',
 };
 
-const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
+const TODAY = new Date().toISOString().split('T')[0];
+
+const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournamentName = '', onSwitchTab }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [currentRound, setCurrentRound] = useState(1);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [pendingResult, setPendingResult] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportForm, setExportForm] = useState({ lieu: '', date: TODAY, aire: '' });
 
   const isActive = ['IN_PROGRESS', 'COMPLETED'].includes(tournamentStatus);
 
@@ -49,9 +59,13 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
     ['IN_PROGRESS', 'COMPLETED'].includes(c.status),
   );
 
+  // Si aucune sélection explicite, on affiche la première catégorie disponible.
+  // "Tournoi complet" (null) n'est pertinent que s'il n'y a aucune catégorie.
+  const effectiveCategoryId = selectedCategoryId ?? startedCategories[0]?.id ?? null;
+
   const getBracket = useQuery({
-    queryKey: ['tournament', tournamentId, 'bracket', selectedCategoryId],
-    queryFn: () => bracketApi.getBracket(tournamentId, selectedCategoryId),
+    queryKey: ['tournament', tournamentId, 'bracket', effectiveCategoryId],
+    queryFn: () => bracketApi.getBracket(tournamentId, effectiveCategoryId),
     enabled: isActive,
   });
 
@@ -69,6 +83,24 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
     ? registrations.find((r) => r.competitor.id === finalMatch.winnerId)?.competitor?.name
     : null;
 
+  const silverParticipant = finalMatch?.winnerId
+    ? finalMatch.participants.find((p) => p.competitorId !== finalMatch.winnerId)
+    : null;
+  const silver = silverParticipant
+    ? registrations.find((r) => r.competitor?.id === silverParticipant.competitorId)?.competitor?.name ?? null
+    : null;
+
+  const semiMatches = totalRounds >= 2 ? (bracketMap.get(totalRounds - 1) ?? []) : [];
+  const bronzes = semiMatches
+    .filter((m) => m.winnerId)
+    .map((m) => {
+      const loser = m.participants.find((p) => p.competitorId !== m.winnerId);
+      return loser
+        ? registrations.find((r) => r.competitor?.id === loser.competitorId)?.competitor?.name ?? null
+        : null;
+    })
+    .filter(Boolean);
+
   const recordResultMutation = useMutation({
     mutationFn: ({ matchId, winnerId }) => matchesApi.recordResult(tournamentId, matchId, winnerId),
     onSuccess: () => {
@@ -82,9 +114,60 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
   });
 
   const handleCategoryChange = (value) => {
-    setSelectedCategoryId(value === '__global__' ? null : value);
+    setSelectedCategoryId(value);
     setCurrentRound(1);
     setSelectedMatch(null);
+  };
+
+  const handleExportPDF = async () => {
+    if (!bracketMap.size) return;
+    setIsExporting(true);
+    setShowExportDialog(false);
+    try {
+      const { exportBracketPDF } = await import('@/lib/bracketPDFExport.js');
+      const categoryName = startedCategories.find((c) => c.id === effectiveCategoryId)?.name ?? 'Bracket';
+      await exportBracketPDF({
+        bracketMap,
+        totalRounds,
+        categoryName,
+        tournamentName,
+        lieu: exportForm.lieu,
+        date: exportForm.date,
+        aire: exportForm.aire,
+      });
+    } catch (err) {
+      toastError(err?.message || "Erreur lors de la génération du PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportAllPDF = async () => {
+    if (startedCategories.length === 0) return;
+    setIsExporting(true);
+    setShowExportDialog(false);
+    try {
+      const { exportAllBracketsPDF } = await import('@/lib/bracketPDFExport.js');
+      const categoriesData = await Promise.all(
+        startedCategories.map(async (cat) => {
+          const data = await bracketApi.getBracket(tournamentId, cat.id);
+          const map  = new Map();
+          if (data?.rounds) data.rounds.forEach(({ round, matches }) => map.set(round, matches));
+          return { bracketMap: map, totalRounds: data?.totalRounds ?? 0, categoryName: cat.name };
+        }),
+      );
+      await exportAllBracketsPDF({
+        categories: categoriesData,
+        tournamentName,
+        lieu: exportForm.lieu,
+        date: exportForm.date,
+        aire: exportForm.aire,
+      });
+    } catch (err) {
+      toastError(err?.message || "Erreur lors de la génération du PDF");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (!isActive) {
@@ -97,32 +180,56 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
 
   return (
     <div className="space-y-4">
-      {/* Sélecteur de catégorie */}
+      {/* Sélecteur de catégorie + export PDF */}
       {startedCategories.length > 0 && (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Afficher :</span>
-          <Select
-            value={selectedCategoryId ?? '__global__'}
-            onValueChange={handleCategoryChange}
-          >
-            <SelectTrigger className="w-52">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__global__">Tournoi complet</SelectItem>
-              {startedCategories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Afficher :</span>
+            <Select
+              value={effectiveCategoryId}
+              onValueChange={handleCategoryChange}
+            >
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {startedCategories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {bracketMap.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExporting}
+              onClick={() => setShowExportDialog(true)}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              {isExporting ? 'Export en cours…' : 'Exporter PDF'}
+            </Button>
+          )}
         </div>
       )}
 
       {/* État vide — aucune catégorie démarrée */}
       {startedCategories.length === 0 && (
-        <p className="text-sm text-muted-foreground py-2">
-          Aucune catégorie démarrée — utilisez <strong>Démarrer</strong> dans l'onglet Général.
-        </p>
+        <div className="flex flex-col items-center gap-3 py-14 text-muted-foreground border rounded-lg">
+          <Tag className="h-10 w-10" aria-hidden="true" />
+          <div className="text-center space-y-1">
+            <p className="font-medium text-foreground">Aucune catégorie démarrée</p>
+            <p className="text-sm">
+              Ouvrez une catégorie et lancez-la pour générer son bracket.
+            </p>
+          </div>
+          {onSwitchTab && (
+            <Button variant="outline" size="sm" onClick={() => onSwitchTab('categories')}>
+              Gérer les catégories
+              <ArrowRight className="h-4 w-4 ml-1.5" />
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Champion */}
@@ -132,11 +239,37 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
             <Trophy className="h-8 w-8 text-primary shrink-0" />
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                {selectedCategoryId
-                  ? `Champion — ${startedCategories.find((c) => c.id === selectedCategoryId)?.name}`
+                {effectiveCategoryId
+                  ? `Champion — ${startedCategories.find((c) => c.id === effectiveCategoryId)?.name}`
                   : 'Champion'}
               </p>
               <p className="text-xl font-bold text-primary">{champion}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Argent — finaliste perdant */}
+      {silver && (
+        <Card className="border-slate-300/50 bg-slate-50/30">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Medal className="h-6 w-6 text-slate-400 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Argent</p>
+              <p className="text-base font-semibold text-slate-500">{silver}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bronzes — demi-finalistes perdants (médaille automatique en Taekwondo) */}
+      {bronzes.length > 0 && (
+        <Card className="border-orange-300/50 bg-orange-50/30">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Medal className="h-6 w-6 text-orange-500 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Bronze</p>
+              <p className="text-base font-semibold text-orange-600">{bronzes.join(' · ')}</p>
             </div>
           </CardContent>
         </Card>
@@ -284,6 +417,61 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations }) => {
           <BracketView bracketMap={bracketMap} totalRounds={totalRounds} />
         </>
       )}
+
+      {/* Modal export PDF */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Exporter en PDF</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="export-lieu">Lieu</Label>
+              <Input
+                id="export-lieu"
+                placeholder="ex : Salle Omnisports de Paris"
+                value={exportForm.lieu}
+                onChange={(e) => setExportForm({ ...exportForm, lieu: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="export-date">Date</Label>
+              <Input
+                id="export-date"
+                type="date"
+                value={exportForm.date}
+                onChange={(e) => setExportForm({ ...exportForm, date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="export-aire">Aire n°</Label>
+              <Input
+                id="export-aire"
+                type="number"
+                min={1}
+                placeholder="ex : 1"
+                value={exportForm.aire}
+                onChange={(e) => setExportForm({ ...exportForm, aire: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="sm:mr-auto" onClick={() => setShowExportDialog(false)}>
+              Annuler
+            </Button>
+            <Button variant="outline" disabled={isExporting} onClick={handleExportPDF}>
+              <FileDown className="h-4 w-4 mr-2" />
+              Cette catégorie
+            </Button>
+            {startedCategories.length > 1 && (
+              <Button disabled={isExporting} onClick={handleExportAllPDF}>
+                <FileDown className="h-4 w-4 mr-2" />
+                Toutes ({startedCategories.length} pages)
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -151,6 +151,16 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
     onError: (e) => toastError(e.error || 'Erreur lors de l\'annulation'),
   });
 
+  const resetMutation = useMutation({
+    mutationFn: (categoryId) => categoriesApi.reset(tournamentId, categoryId),
+    onSuccess: () => {
+      invalidateCategories();
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'bracket']});
+      toastSuccess('Bracket supprimé — catégorie réouverte');
+    },
+    onError: (e) => toastError(e.error || 'Erreur lors de la réinitialisation'),
+  });
+
   const handleCreate = (e) => {
     e.preventDefault();
     if (!createForm.name.trim()) return;
@@ -324,7 +334,19 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
                         />
                       </>
                     )}
-                    {['IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(cat.status) && (
+                    {cat.status === 'IN_PROGRESS' && (
+                      <ConfirmActionDialog
+                        trigger={<Button size="sm" variant="outline"
+                                         disabled={resetMutation.isPending}>Réinitialiser</Button>}
+                        title="Réinitialiser le bracket ?"
+                        description="Le bracket sera supprimé et la catégorie repassera en statut Ouvert. Les inscriptions sont conservées."
+                        confirmLabel="Réinitialiser"
+                        confirmVariant="destructive"
+                        onConfirm={() => resetMutation.mutate(cat.id)}
+                        isLoading={resetMutation.isPending}
+                      />
+                    )}
+                    {['COMPLETED', 'CANCELLED'].includes(cat.status) && (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </div>
