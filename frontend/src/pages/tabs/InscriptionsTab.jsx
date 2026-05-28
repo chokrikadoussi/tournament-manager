@@ -41,8 +41,10 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
   const [tableSortDir, setTableSortDir]   = useState('asc');
 
   // Edit competitor
-  const [editReg, setEditReg]   = useState(null);
-  const [editForm, setEditForm] = useState({});
+  const [editReg, setEditReg]     = useState(null);
+  const [editForm, setEditForm]   = useState({});
+  const [formErrors, setFormErrors] = useState({});
+  const [formError, setFormError]   = useState('');
 
   // Métier #12 — cohérence DRAFT/OPEN : même droits que l'import CSV
   const canRegister   = ['DRAFT', 'OPEN'].includes(tournamentStatus);
@@ -161,7 +163,7 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
       setEditReg(null);
       toastSuccess('Compétiteur mis à jour');
     },
-    onError: (e) => toastError(e.error || 'Erreur lors de la mise à jour'),
+    onError: (e) => setFormError(e.error || 'Erreur lors de la mise à jour'),
   });
 
   // ── Prévisualisation ────────────────────────────────────────────────────────
@@ -228,26 +230,43 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
   };
 
   const openEdit = (reg) => {
+    setFormErrors({});
+    setFormError('');
     setEditReg(reg);
     setEditForm({
       name:      reg.competitor.name      ?? '',
       type:      reg.competitor.type      ?? 'PLAYER',
-      gender:    reg.competitor.gender    ?? '',
+      gender:    reg.competitor.gender    ?? '__none__',
       birthYear: reg.competitor.birthYear ?? '',
       club:      reg.competitor.club      ?? '',
     });
   };
 
   const saveEdit = () => {
-    if (!editForm.name?.trim()) return;
+    const errors = {};
+    if (!editForm.name?.trim()) {
+      errors.name = 'Le nom est requis';
+    }
+    if (editForm.birthYear !== '' && editForm.birthYear !== undefined) {
+      const y = parseInt(editForm.birthYear, 10);
+      if (isNaN(y) || y < 1900 || y > new Date().getFullYear()) {
+        errors.birthYear = `Année invalide (1900–${new Date().getFullYear()})`;
+      }
+    }
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+    setFormError('');
     updateCompetitorMutation.mutate({
       id:   editReg.competitor.id,
       data: {
         name:      editForm.name.trim(),
         type:      editForm.type || undefined,
-        gender:    editForm.gender   || null,
+        gender:    (editForm.gender && editForm.gender !== '__none__') ? editForm.gender : null,
         birthYear: editForm.birthYear ? parseInt(editForm.birthYear, 10) : null,
-        club:      editForm.club.trim() || null,
+        club:      editForm.club?.trim() || null,
       },
     });
   };
@@ -628,16 +647,32 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
           </DialogHeader>
 
           <div className="grid gap-4 py-1">
+            {/* Erreur serveur générale */}
+            {formError && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
             {/* Nom */}
             <div className="grid gap-1.5">
               <Label htmlFor="edit-name">Nom <span className="text-destructive">*</span></Label>
               <Input
                 id="edit-name"
                 value={editForm.name ?? ''}
-                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) => {
+                  setEditForm((f) => ({ ...f, name: e.target.value }));
+                  if (formErrors.name) setFormErrors((fe) => ({ ...fe, name: undefined }));
+                }}
                 placeholder="Nom du compétiteur"
+                aria-invalid={!!formErrors.name}
+                className={formErrors.name ? 'border-destructive focus-visible:ring-destructive' : ''}
                 autoFocus
               />
+              {formErrors.name && (
+                <p className="text-xs text-destructive">{formErrors.name}</p>
+              )}
             </div>
 
             {/* Type */}
@@ -661,14 +696,14 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
             <div className="grid gap-1.5">
               <Label>Genre</Label>
               <Select
-                value={editForm.gender ?? ''}
+                value={editForm.gender ?? '__none__'}
                 onValueChange={(v) => setEditForm((f) => ({ ...f, gender: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Non précisé" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Non précisé</SelectItem>
+                  <SelectItem value="__none__">Non précisé</SelectItem>
                   <SelectItem value="MALE">Homme</SelectItem>
                   <SelectItem value="FEMALE">Femme</SelectItem>
                   <SelectItem value="MIXED">Mixte</SelectItem>
@@ -686,9 +721,17 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
                   min="1900"
                   max={new Date().getFullYear()}
                   value={editForm.birthYear ?? ''}
-                  onChange={(e) => setEditForm((f) => ({ ...f, birthYear: e.target.value }))}
+                  onChange={(e) => {
+                    setEditForm((f) => ({ ...f, birthYear: e.target.value }));
+                    if (formErrors.birthYear) setFormErrors((fe) => ({ ...fe, birthYear: undefined }));
+                  }}
                   placeholder="—"
+                  aria-invalid={!!formErrors.birthYear}
+                  className={formErrors.birthYear ? 'border-destructive focus-visible:ring-destructive' : ''}
                 />
+                {formErrors.birthYear && (
+                  <p className="text-xs text-destructive">{formErrors.birthYear}</p>
+                )}
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="edit-club">Club</Label>
