@@ -1,5 +1,6 @@
 import {NavLink, Link} from 'react-router-dom';
-import {Trophy} from 'lucide-react';
+import {Trophy, Plus} from 'lucide-react';
+import {Button} from '@/components/ui/button.jsx';
 
 const Layout = ({children}) => {
   return (
@@ -12,7 +13,7 @@ const Layout = ({children}) => {
               Tournament Manager
             </Link>
           </div>
-          <nav className="flex gap-4">
+          <nav className="flex gap-4 flex-1">
             <NavLink
               to="/tournaments"
               className={({isActive}) =>
@@ -23,17 +24,13 @@ const Layout = ({children}) => {
             >
               Tournois
             </NavLink>
-            <NavLink
-              to="/competitors"
-              className={({isActive}) =>
-                isActive
-                  ? 'text-sm font-medium text-primary border-b-2 border-primary pb-0.5 transition-colors'
-                  : 'text-sm font-medium text-muted-foreground hover:text-foreground transition-colors'
-              }
-            >
-              Compétiteurs
-            </NavLink>
           </nav>
+          <Button asChild size="sm">
+            <Link to="/tournaments?new=1">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Nouveau tournoi
+            </Link>
+          </Button>
         </div>
       </header>
       <main className="container mx-auto px-4 py-6 flex-1">

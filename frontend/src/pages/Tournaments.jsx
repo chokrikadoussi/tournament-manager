@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import tournamentsApi from '@/api/tournaments.js';
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { queryClient } from '@/main.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import {
@@ -44,6 +44,15 @@ const Tournaments = () => {
   const [formData, setFormData] = useState({
     name: '', sport: '', maxParticipants: '', format: 'SINGLE_ELIM',
   });
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Ouvre automatiquement la modale si ?new=1 (ex: bouton nav)
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   const clearData = () => {
     setFormData({ name: '', sport: '', maxParticipants: '', format: 'SINGLE_ELIM' });
