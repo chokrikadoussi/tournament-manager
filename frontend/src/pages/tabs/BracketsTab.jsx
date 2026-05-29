@@ -46,7 +46,8 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
   const [pendingResult, setPendingResult] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [exportForm, setExportForm] = useState({ lieu: '', date: TODAY, aire: '' });
+  const [exportForm, setExportForm] = useState({ lieu: '', date: TODAY });
+  const [aireByCat, setAireByCat]   = useState({}); // Aire n° par catégorie (clé = id)
 
   const isActive = ['IN_PROGRESS', 'COMPLETED'].includes(tournamentStatus);
 
@@ -133,7 +134,7 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
         tournamentName,
         lieu: exportForm.lieu,
         date: exportForm.date,
-        aire: exportForm.aire,
+        aire: aireByCat[effectiveCategoryId] ?? '',
       });
     } catch (err) {
       toastError(err?.message || "Erreur lors de la génération du PDF");
@@ -153,7 +154,12 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
           const data = await bracketApi.getBracket(tournamentId, cat.id);
           const map  = new Map();
           if (data?.rounds) data.rounds.forEach(({ round, matches }) => map.set(round, matches));
-          return { bracketMap: map, totalRounds: data?.totalRounds ?? 0, categoryName: cat.name };
+          return {
+            bracketMap: map,
+            totalRounds: data?.totalRounds ?? 0,
+            categoryName: cat.name,
+            aire: aireByCat[cat.id] ?? '',
+          };
         }),
       );
       await exportAllBracketsPDF({
@@ -161,7 +167,6 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
         tournamentName,
         lieu: exportForm.lieu,
         date: exportForm.date,
-        aire: exportForm.aire,
       });
     } catch (err) {
       toastError(err?.message || "Erreur lors de la génération du PDF");
@@ -511,17 +516,38 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
                 onChange={(e) => setExportForm({ ...exportForm, date: e.target.value })}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="export-aire">Aire n°</Label>
-              <Input
-                id="export-aire"
-                type="number"
-                min={1}
-                placeholder="ex : 1"
-                value={exportForm.aire}
-                onChange={(e) => setExportForm({ ...exportForm, aire: e.target.value })}
-              />
-            </div>
+            {startedCategories.length > 1 ? (
+              <div className="space-y-1.5">
+                <Label>Aire n° par catégorie</Label>
+                <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                  {startedCategories.map((cat) => (
+                    <div key={cat.id} className="flex items-center gap-2">
+                      <span className="flex-1 text-sm truncate" title={cat.name}>{cat.name}</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Aire n°"
+                        className="h-8 w-24"
+                        value={aireByCat[cat.id] ?? ''}
+                        onChange={(e) => setAireByCat((m) => ({ ...m, [cat.id]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="export-aire">Aire n°</Label>
+                <Input
+                  id="export-aire"
+                  type="number"
+                  min={1}
+                  placeholder="ex : 1"
+                  value={aireByCat[effectiveCategoryId] ?? ''}
+                  onChange={(e) => setAireByCat((m) => ({ ...m, [effectiveCategoryId]: e.target.value }))}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" className="sm:mr-auto" onClick={() => setShowExportDialog(false)}>

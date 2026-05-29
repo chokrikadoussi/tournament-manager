@@ -431,7 +431,8 @@ export async function exportAllBracketsPDF({ categories, tournamentName = '', li
 
   categories.forEach((cat, i) => {
     if (i > 0) pdf.addPage('a4', 'landscape');
-    _drawPage(pdf, { ...cat, tournamentName, lieu, date, aire });
+    // Aire propre à la catégorie si fournie, sinon repli sur l'aire globale.
+    _drawPage(pdf, { ...cat, tournamentName, lieu, date, aire: cat.aire ?? aire });
   });
 
   const slug     = slugify(tournamentName || 'tournoi');
