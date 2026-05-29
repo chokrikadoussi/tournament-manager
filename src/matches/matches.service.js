@@ -76,9 +76,10 @@ export const recordResults = async (tournamentId, matchId, winnerId) => {
         });
       }
 
-      // Gestion de la troisième place pour les tournois à élimination simple
+      // Gestion de la troisième place pour les tournois à élimination simple.
+      // On raisonne par catégorie (chaque catégorie a son propre bracket).
       const totalParticipants = await tx.tournamentRegistration.count({
-        where: { tournamentId: tournamentId },
+        where: { tournamentId, ...(match.categoryId && { categoryId: match.categoryId }) },
       });
 
       const totalRounds = getTotalRounds(totalParticipants);
@@ -89,6 +90,7 @@ export const recordResults = async (tournamentId, matchId, winnerId) => {
             tournamentId: tournamentId,
             round: totalRounds,
             position: 1,
+            ...(match.categoryId && { categoryId: match.categoryId }),
           },
           select: { id: true },
         });
@@ -119,10 +121,35 @@ export const recordResults = async (tournamentId, matchId, winnerId) => {
         }
       }
     } else {
-      await tx.tournament.update({
-        where: { id: tournamentId },
-        data: { status: TournamentStatus.COMPLETED },
-      });
+      // Pas de match suivant → c'est la finale. Avec des brackets par catégorie,
+      // chaque catégorie a sa propre finale : on termine la CATÉGORIE concernée,
+      // et le TOURNOI seulement quand toutes ses catégories non annulées le sont.
+      if (match.categoryId) {
+        await tx.category.update({
+          where: { id: match.categoryId },
+          data: { status: TournamentStatus.COMPLETED },
+        });
+
+        const pending = await tx.category.count({
+          where: {
+            tournamentId,
+            status: { notIn: [TournamentStatus.COMPLETED, TournamentStatus.CANCELLED] },
+          },
+        });
+
+        if (pending === 0) {
+          await tx.tournament.update({
+            where: { id: tournamentId },
+            data: { status: TournamentStatus.COMPLETED },
+          });
+        }
+      } else {
+        // Tournoi sans catégories : la finale termine le tournoi.
+        await tx.tournament.update({
+          where: { id: tournamentId },
+          data: { status: TournamentStatus.COMPLETED },
+        });
+      }
     }
 
     return tx.match.findUnique({

@@ -248,7 +248,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
           />
         </>
       )}
-      {cat.status === 'IN_PROGRESS' && (
+      {['IN_PROGRESS', 'COMPLETED'].includes(cat.status) && (
         <ConfirmActionDialog
           trigger={<Button size="sm" variant="outline"
                            disabled={resetMutation.isPending}>Réinitialiser</Button>}
@@ -260,7 +260,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
           isLoading={resetMutation.isPending}
         />
       )}
-      {['COMPLETED', 'CANCELLED'].includes(cat.status) && (
+      {cat.status === 'CANCELLED' && (
         <span className="text-xs text-muted-foreground">—</span>
       )}
     </div>

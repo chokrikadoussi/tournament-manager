@@ -294,12 +294,13 @@ export const cancelCategory = async (tournamentId, categoryId) => {
 };
 
 export const resetCategory = async (tournamentId, categoryId) => {
-  await tournamentService.getById(tournamentId);
+  const tournament = await tournamentService.getById(tournamentId);
 
   const category = await getCategoryOrThrow(tournamentId, categoryId);
 
-  if (category.status !== TournamentStatus.IN_PROGRESS) {
-    throw new AppError('Seule une catégorie en cours peut être réinitialisée', 409);
+  const RESETTABLE = [TournamentStatus.IN_PROGRESS, TournamentStatus.COMPLETED];
+  if (!RESETTABLE.includes(category.status)) {
+    throw new AppError('Seule une catégorie en cours ou terminée peut être réinitialisée', 409);
   }
 
   await prisma.$transaction(async (tx) => {
@@ -317,6 +318,15 @@ export const resetCategory = async (tournamentId, categoryId) => {
       where: { id: categoryId },
       data: { status: TournamentStatus.OPEN },
     });
+
+    // Si le tournoi avait été marqué terminé, le rouvrir : une catégorie
+    // redevient active, donc le tournoi n'est plus terminé.
+    if (tournament.status === TournamentStatus.COMPLETED) {
+      await tx.tournament.update({
+        where: { id: tournamentId },
+        data: { status: TournamentStatus.IN_PROGRESS },
+      });
+    }
   });
 
   return prisma.category.findUnique({ where: { id: categoryId } });
