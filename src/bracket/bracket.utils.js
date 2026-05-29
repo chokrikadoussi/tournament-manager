@@ -28,12 +28,36 @@ export function getTotalRounds(participantCount) {
   return Math.ceil(log_base_2);
 }
 
+/**
+ * Positions de seed standard (méthode du "repli" / fold seeding).
+ *
+ * Retourne un tableau `positions` où `positions[rang]` est l'index du slot
+ * (0-indexé) dans lequel placer la tête de série de rang `rang` (rang 0 = seed 1).
+ *
+ * Garantit la répartition classique : les meilleures têtes de série sont
+ * réparties dans des moitiés/quarts opposés (seed 1 vs seed 2 en finale,
+ * seed 1 vs seed 4 / seed 2 vs seed 3 en demies, etc.).
+ *
+ * Ex. bracketSize 8 → [0, 4, 6, 2, 3, 7, 5, 1]
+ *   seed1→slot0, seed2→slot4, seed3→slot6, seed4→slot2 …
+ */
 export function getSeedPositions(bracketSize) {
-  const matchCount = bracketSize / 2;
-  const matchPositions = [];
-  for (let i = 0; i < matchCount / 2; i++) {
-    matchPositions.push(i);
-    matchPositions.push(matchCount - 1 - i);
+  // 1. Construire l'ordre des rangs de seed par slot via le repli successif.
+  let order = [0];
+  while (order.length < bracketSize) {
+    const total = order.length * 2;
+    const next = [];
+    for (const rank of order) {
+      next.push(rank);
+      next.push(total - 1 - rank);
+    }
+    order = next;
   }
-  return matchPositions.map((m) => m * 2);
+  // `order[slot]` = rang de seed attendu à ce slot.
+  // 2. Inverser pour obtenir `positions[rang]` = slot.
+  const positions = new Array(bracketSize);
+  order.forEach((rank, slot) => {
+    positions[rank] = slot;
+  });
+  return positions;
 }

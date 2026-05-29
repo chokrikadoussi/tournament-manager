@@ -35,7 +35,8 @@ function parseRows(buffer) {
   return records.map((row, i) => {
     const normalized = {};
     for (const key of Object.keys(row)) {
-      normalized[key.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()] = row[key];
+      // NFD décompose les accents en marques combinantes ; \p{M} les retire.
+      normalized[key.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()] = row[key];
     }
     return { _line: i + 2, ...normalized };
   });
