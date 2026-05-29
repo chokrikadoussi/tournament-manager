@@ -46,14 +46,27 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
 
   const BANNER_H = 22;
   const HH       = BANNER_H;
-  const FH       = 22;
+  const FH       = 18;
   const MH       = 13;
   const FW       = 42;
   const BT       = HH;
   const BH       = PH - HH - FH;
 
-  const sideR     = Math.max(totalRounds - 1, 1);
-  const sideAvail = (PW - 2 * M - FW) / 2;
+  // Absorption des BYE : si le 1er tour contient des byes et qu'il y a ≥3 tours,
+  // on ne dessine PAS la colonne du 1er tour (quasi vide). Les qualifiés d'office
+  // apparaissent directement au tour suivant (déjà propagés en base) ; les rares
+  // vrais matchs du 1er tour sont dessinés en petites cases "préliminaires"
+  // à gauche/droite de leur slot cible.
+  const round1        = bracketMap.get(1) ?? [];
+  const round1HasByes = round1.some((m) => m.status === 'BYE' || m.participants.length < 2);
+  const absorb        = round1HasByes && totalRounds >= 3;
+  const startRound    = absorb ? 2 : 1;
+  const displayRounds = totalRounds - startRound + 1;
+  const prelimMatches = absorb ? round1.filter((m) => m.participants.length === 2) : [];
+
+  const PFW       = absorb ? 26 : 0; // largeur réservée à la colonne préliminaire
+  const sideR     = Math.max(displayRounds - 1, 1);
+  const sideAvail = (PW - 2 * M - FW) / 2 - PFW;
   const colW      = sideAvail / sideR;
   const MW        = colW * 0.84;
 
@@ -114,35 +127,35 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
 
   // ── GEOMETRY ───────────────────────────────────────────────────────────────
   const cy     = (i, n) => BT + (i + 0.5) * BH / n;
-  const lx     = (r)   => M + (r - 1) * colW;
-  const rx     = (r)   => PW - M - (r - 1) * colW - MW;
+  const lx     = (r)   => M + PFW + (r - startRound) * colW;
+  const rx     = (r)   => PW - M - PFW - (r - startRound) * colW - MW;
   const finalX = (PW - FW) / 2;
   const finalY = BT + BH / 2;
 
   const STRIP = 3.0;
 
   // ── MATCH BOX ──────────────────────────────────────────────────────────────
-  const drawBox = (x, y, match, side = 'left', w = MW) => {
-    const bx      = x, by = y - MH / 2;
+  const drawBox = (x, y, match, side = 'left', w = MW, h = MH) => {
+    const bx      = x, by = y - h / 2;
     const isRight = side === 'right';
 
     pdf.setFillColor(210, 212, 220);
-    pdf.rect(bx + 0.6, by + 0.6, w, MH, 'F');
+    pdf.rect(bx + 0.6, by + 0.6, w, h, 'F');
 
     pdf.setFillColor(...BG_CARD);
     pdf.setDrawColor(...LIGHT);
     pdf.setLineWidth(0.28);
-    pdf.rect(bx, by, w, MH, 'FD');
+    pdf.rect(bx, by, w, h, 'FD');
 
     pdf.setDrawColor(222, 224, 232);
     pdf.setLineWidth(0.18);
     const divX1 = isRight ? bx             : bx + STRIP;
     const divX2 = isRight ? bx + w - STRIP : bx + w;
-    pdf.line(divX1, by + MH / 2, divX2, by + MH / 2);
+    pdf.line(divX1, by + h / 2, divX2, by + h / 2);
 
     [0, 1].forEach((slot) => {
       const p     = match.participants.find((pt) => pt.slot === slot);
-      const slotY = by + slot * MH / 2;
+      const slotY = by + slot * h / 2;
       const isWin = match.winnerId && p?.competitorId === match.winnerId;
       const name  = p?.competitor?.name;
       const isBye = p && !name;
@@ -151,26 +164,25 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
 
       const stripX = isRight ? bx + w - STRIP : bx;
       pdf.setFillColor(...sColor);
-      pdf.rect(stripX, slotY, STRIP, MH / 2, 'F');
+      pdf.rect(stripX, slotY, STRIP, h / 2, 'F');
 
       if (isWin) {
         const hlX = isRight ? bx : bx + STRIP;
         pdf.setFillColor(...(slot === 0 ? [230, 241, 255] : [255, 230, 230]));
-        pdf.rect(hlX, slotY, w - STRIP, MH / 2, 'F');
+        pdf.rect(hlX, slotY, w - STRIP, h / 2, 'F');
         pdf.setFillColor(...sColor);
-        pdf.rect(stripX, slotY, STRIP, MH / 2, 'F');
+        pdf.rect(stripX, slotY, STRIP, h / 2, 'F');
       }
 
       // ── Lettre B / R dans le bandeau (lisible en impression N&B) ──
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(4.5);
       pdf.setTextColor(...WHITE);
-      pdf.text(slot === 0 ? 'B' : 'R', stripX + STRIP / 2, slotY + MH / 4 + 1.3, { align: 'center' });
+      pdf.text(slot === 0 ? 'B' : 'R', stripX + STRIP / 2, slotY + h / 4 + 1.3, { align: 'center' });
 
       // ── Nom complet : on réduit la police pour faire tenir prénom + nom ──
       const raw    = name ?? (isBye ? 'BYE' : '—');
       const availW = w - STRIP - 4;
-      const padX   = STRIP + 2;
 
       pdf.setFont('helvetica', isWin ? 'bold' : 'normal');
       let fs = 6.5;
@@ -190,11 +202,11 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
       }
 
       pdf.setTextColor(...(isTbd || isBye ? [162, 164, 175] : DARK));
-      if (isRight) {
-        pdf.text(label, bx + w - padX, slotY + MH / 4 + 1.3, { align: 'right' });
-      } else {
-        pdf.text(label, bx + padX, slotY + MH / 4 + 1.3);
-      }
+      // Centré horizontalement dans la zone hors bandeau B/R
+      const textCx = isRight
+        ? bx + (w - STRIP) / 2          // bandeau à droite → zone [bx, bx+w-STRIP]
+        : bx + STRIP + (w - STRIP) / 2; // bandeau à gauche → zone [bx+STRIP, bx+w]
+      pdf.text(label, textCx, slotY + h / 4 + 1.3, { align: 'center' });
     });
   };
 
@@ -216,7 +228,7 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   };
 
   // ── ROUNDS ─────────────────────────────────────────────────────────────────
-  for (let r = 1; r <= totalRounds; r++) {
+  for (let r = startRound; r <= totalRounds; r++) {
     const matches = bracketMap.get(r) ?? [];
 
     if (r === totalRounds) {
@@ -262,6 +274,40 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
     }
   }
 
+  // ── CASES PRÉLIMINAIRES (BYE absorbés) ───────────────────────────────────────
+  // On dessine les rares vrais matchs du 1er tour comme petites cases, alignées
+  // à gauche/droite du slot qu'ils alimentent dans le tour de départ (startRound).
+  if (absorb && prelimMatches.length > 0) {
+    const baseM    = bracketMap.get(startRound) ?? [];
+    const halfBase = Math.ceil(baseM.length / 2);
+    const rightCnt = baseM.length - halfBase;
+    const FEED_GAP = 5;
+    const feederW  = PFW - FEED_GAP;
+    const feederH  = Math.min(MH, 9);
+
+    prelimMatches.forEach((m) => {
+      const tpos = Math.floor(m.position / 2); // position cible au tour de départ
+      const slot = m.position % 2;             // slot cible (0 = haut, 1 = bas)
+
+      let boxX, boxCenterY, side;
+      if (tpos < halfBase) {
+        side = 'left';  boxX = lx(startRound); boxCenterY = cy(tpos, halfBase);
+      } else {
+        side = 'right'; boxX = rx(startRound); boxCenterY = cy(tpos - halfBase, rightCnt);
+      }
+      const slotMidY = boxCenterY - MH / 2 + slot * (MH / 2) + MH / 4;
+
+      if (side === 'left') {
+        drawBox(M, slotMidY, m, 'left', feederW, feederH);
+        drawLine(M + feederW, slotMidY, boxX, slotMidY);
+      } else {
+        const fx = PW - M - feederW;
+        drawBox(fx, slotMidY, m, 'right', feederW, feederH);
+        drawLine(boxX + MW, slotMidY, fx, slotMidY);
+      }
+    });
+  }
+
   // ── FOOTER ─────────────────────────────────────────────────────────────────
   const footerY = PH - FH;
 
@@ -272,8 +318,8 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   pdf.setLineWidth(0.25);
   pdf.line(0, footerY, PW, footerY);
 
-  const rlY = footerY + 7;
-  for (let r = 1; r <= totalRounds; r++) {
+  const rlY = footerY + 4.5;
+  for (let r = startRound; r <= totalRounds; r++) {
     const matches = bracketMap.get(r) ?? [];
     const halfN   = Math.ceil(matches.length / 2);
     const lM      = matches.slice(0, halfN);
@@ -292,9 +338,23 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
     }
   }
 
+  // Label de la colonne préliminaire
+  if (absorb && prelimMatches.length > 0) {
+    const baseLen   = (bracketMap.get(startRound) ?? []).length;
+    const halfBase  = Math.ceil(baseLen / 2);
+    const feederW   = PFW - 5;
+    const leftHas   = prelimMatches.some((m) => Math.floor(m.position / 2) <  halfBase);
+    const rightHas  = prelimMatches.some((m) => Math.floor(m.position / 2) >= halfBase);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(5.8);
+    pdf.setTextColor(...MID);
+    if (leftHas)  pdf.text('Tour prélim.', M + feederW / 2, rlY, { align: 'center' });
+    if (rightHas) pdf.text('Tour prélim.', PW - M - feederW / 2, rlY, { align: 'center' });
+  }
+
   // ── MEDALS ─────────────────────────────────────────────────────────────────
   const finalMatch = bracketMap.get(totalRounds)?.[0];
-  const medalY     = footerY + 13;
+  const medalY     = footerY + 10;
   const PILL_W     = 18, PILL_H = 4.5;
 
   const drawMedal = (cx, color, labelText, names) => {
