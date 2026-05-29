@@ -195,14 +195,14 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
     <div className="space-y-4">
       {/* Sélecteur de catégorie + export PDF */}
       {startedCategories.length > 0 && (
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Afficher :</span>
+            <span className="text-sm text-muted-foreground shrink-0">Afficher :</span>
             <Select
               value={effectiveCategoryId}
               onValueChange={handleCategoryChange}
             >
-              <SelectTrigger className="w-52">
+              <SelectTrigger className="w-full sm:w-52">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -315,9 +315,9 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
         </div>
       )}
 
-      {/* Table des matchs */}
+      {/* Table des matchs — desktop */}
       {currentRoundMatches.length > 0 && (
-        <div className="rounded-lg border overflow-x-auto">
+        <div className="hidden md:block rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
@@ -379,6 +379,61 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Matchs — cartes mobile */}
+      {currentRoundMatches.length > 0 && (
+        <div className="md:hidden space-y-2">
+          {currentRoundMatches.map((match) => {
+            const cfg = MATCH_STATUS_CONFIG[match.status] || { label: match.status, className: '' };
+            const StatusIcon = cfg.icon;
+            const winner = match.winnerId
+              ? match.participants.find((p) => p.competitorId === match.winnerId)?.competitor
+              : null;
+            return (
+              <div
+                key={match.id}
+                className={`rounded-lg border bg-background p-3 space-y-2 ${ROW_CLASS[match.status] ?? ''}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <Badge className={cfg.className}>
+                    {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                    {cfg.label}
+                  </Badge>
+                  {match.status === 'READY' && (
+                    <Button size="sm" onClick={() => setSelectedMatch(match)}>
+                      <Pencil className="h-4 w-4 mr-1" />Saisir résultat
+                    </Button>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  {[0, 1].map((slot) => {
+                    const p = match.participants[slot];
+                    const reg = registrations.find((r) => r.competitor?.id === p?.competitorId);
+                    const isWinner = winner && p?.competitorId === match.winnerId;
+                    return (
+                      <div
+                        key={slot}
+                        className={`flex items-center gap-1.5 text-sm ${isWinner ? 'font-semibold text-primary' : ''}`}
+                      >
+                        {isWinner && <Trophy className="h-4 w-4 shrink-0" />}
+                        {p?.competitor ? (
+                          <>
+                            <span>{p.competitor.name}</span>
+                            {reg?.seed && <span className="text-xs text-muted-foreground">(#{reg.seed})</span>}
+                            <CompetitorTypeBadge type={p.competitor.type} />
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

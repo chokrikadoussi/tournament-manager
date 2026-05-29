@@ -46,7 +46,7 @@ const CategoryForm = ({form, setForm}) => (
         </SelectContent>
       </Select>
     </Field>
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <Field>
         <Label htmlFor="cat-min">Année min</Label>
         <Input id="cat-min" type="number" placeholder="ex: 2005" min={1900} max={new Date().getFullYear()}
@@ -191,6 +191,81 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
     return `≤ ${cat.birthYearMax}`;
   };
 
+  const renderActions = (cat) => (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {/* DRAFT actions */}
+      {cat.status === 'DRAFT' && (
+        <>
+          {canOpen && (
+            <Button size="sm" onClick={() => openMutation.mutate(cat.id)}
+                    disabled={openMutation.isPending}>
+              Ouvrir
+            </Button>
+          )}
+          {canEdit && (
+            <Button size="sm" variant="outline" onClick={() => openEditDialog(cat)}>
+              Modifier
+            </Button>
+          )}
+          <ConfirmActionDialog
+            trigger={<Button size="sm" variant="destructive"
+                             disabled={deleteMutation.isPending}>Supprimer</Button>}
+            title="Supprimer la catégorie ?"
+            description="Cette action est irréversible."
+            confirmLabel="Supprimer"
+            confirmVariant="destructive"
+            onConfirm={() => deleteMutation.mutate(cat.id)}
+            isLoading={deleteMutation.isPending}
+          />
+        </>
+      )}
+      {/* OPEN actions */}
+      {cat.status === 'OPEN' && (
+        <>
+          {canStart && (
+            <ConfirmActionDialog
+              trigger={<Button size="sm" disabled={startMutation.isPending}>Démarrer</Button>}
+              title="Démarrer la catégorie ?"
+              description="Le bracket sera généré pour cette catégorie. Cette action est irréversible."
+              confirmLabel="Démarrer"
+              onConfirm={() => startMutation.mutate(cat.id)}
+              isLoading={startMutation.isPending}
+            />
+          )}
+          <Button size="sm" variant="outline" onClick={() => closeMutation.mutate(cat.id)}
+                  disabled={closeMutation.isPending}>
+            Fermer
+          </Button>
+          <ConfirmActionDialog
+            trigger={<Button size="sm" variant="destructive"
+                             disabled={cancelMutation.isPending}>Annuler</Button>}
+            title="Annuler la catégorie ?"
+            description="La catégorie sera annulée et les inscriptions dissociées."
+            confirmLabel="Annuler la catégorie"
+            confirmVariant="destructive"
+            onConfirm={() => cancelMutation.mutate(cat.id)}
+            isLoading={cancelMutation.isPending}
+          />
+        </>
+      )}
+      {cat.status === 'IN_PROGRESS' && (
+        <ConfirmActionDialog
+          trigger={<Button size="sm" variant="outline"
+                           disabled={resetMutation.isPending}>Réinitialiser</Button>}
+          title="Réinitialiser le bracket ?"
+          description="Le bracket sera supprimé et la catégorie repassera en statut Ouvert. Les inscriptions sont conservées."
+          confirmLabel="Réinitialiser"
+          confirmVariant="destructive"
+          onConfirm={() => resetMutation.mutate(cat.id)}
+          isLoading={resetMutation.isPending}
+        />
+      )}
+      {['COMPLETED', 'CANCELLED'].includes(cat.status) && (
+        <span className="text-xs text-muted-foreground">—</span>
+      )}
+    </div>
+  );
+
   if (isLoading) return <TableSkeleton rows={3} cols={5}/>;
   if (isError) return <p className="text-sm text-destructive">Impossible de charger les catégories.</p>;
 
@@ -250,112 +325,74 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
           )}
         </div>
       ) : (
-        <div className="rounded-lg border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-            <tr>
-              <th className="px-4 py-2.5 text-left font-medium">Nom</th>
-              <th className="px-4 py-2.5 text-left font-medium">Genre</th>
-              <th className="px-4 py-2.5 text-left font-medium">Années</th>
-              <th className="px-4 py-2.5 text-left font-medium">Inscrits</th>
-              <th className="px-4 py-2.5 text-left font-medium">Statut</th>
-              <th className="px-4 py-2.5 text-left font-medium">Actions</th>
-            </tr>
-            </thead>
-            <tbody className="divide-y">
-            {categories.map((cat) => (
-              <tr key={cat.id} className="bg-background hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3 font-medium">{cat.name}</td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {cat.gender ? GENDER_LABELS[cat.gender] : <span className="text-muted-foreground">—</span>}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground tabular-nums">{formatRange(cat)}</td>
-                <td className="px-4 py-3 tabular-nums">
-                  {cat._count?.registrations ?? 0}
-                  {cat.maxParticipants ? <span className="text-muted-foreground"> / {cat.maxParticipants}</span> : ''}
-                </td>
-                <td className="px-4 py-3">
-                  <CategoryStatusBadge status={cat.status}/>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {/* DRAFT actions */}
-                    {cat.status === 'DRAFT' && (
-                      <>
-                        {canOpen && (
-                          <Button size="sm" onClick={() => openMutation.mutate(cat.id)}
-                                  disabled={openMutation.isPending}>
-                            Ouvrir
-                          </Button>
-                        )}
-                        {canEdit && (
-                          <Button size="sm" variant="outline" onClick={() => openEditDialog(cat)}>
-                            Modifier
-                          </Button>
-                        )}
-                        <ConfirmActionDialog
-                          trigger={<Button size="sm" variant="destructive"
-                                           disabled={deleteMutation.isPending}>Supprimer</Button>}
-                          title="Supprimer la catégorie ?"
-                          description="Cette action est irréversible."
-                          confirmLabel="Supprimer"
-                          confirmVariant="destructive"
-                          onConfirm={() => deleteMutation.mutate(cat.id)}
-                          isLoading={deleteMutation.isPending}
-                        />
-                      </>
-                    )}
-                    {/* OPEN actions */}
-                    {cat.status === 'OPEN' && (
-                      <>
-                        {canStart && (
-                          <ConfirmActionDialog
-                            trigger={<Button size="sm" disabled={startMutation.isPending}>Démarrer</Button>}
-                            title="Démarrer la catégorie ?"
-                            description="Le bracket sera généré pour cette catégorie. Cette action est irréversible."
-                            confirmLabel="Démarrer"
-                            onConfirm={() => startMutation.mutate(cat.id)}
-                            isLoading={startMutation.isPending}
-                          />
-                        )}
-                        <Button size="sm" variant="outline" onClick={() => closeMutation.mutate(cat.id)}
-                                disabled={closeMutation.isPending}>
-                          Fermer
-                        </Button>
-                        <ConfirmActionDialog
-                          trigger={<Button size="sm" variant="destructive"
-                                           disabled={cancelMutation.isPending}>Annuler</Button>}
-                          title="Annuler la catégorie ?"
-                          description="La catégorie sera annulée et les inscriptions dissociées."
-                          confirmLabel="Annuler la catégorie"
-                          confirmVariant="destructive"
-                          onConfirm={() => cancelMutation.mutate(cat.id)}
-                          isLoading={cancelMutation.isPending}
-                        />
-                      </>
-                    )}
-                    {cat.status === 'IN_PROGRESS' && (
-                      <ConfirmActionDialog
-                        trigger={<Button size="sm" variant="outline"
-                                         disabled={resetMutation.isPending}>Réinitialiser</Button>}
-                        title="Réinitialiser le bracket ?"
-                        description="Le bracket sera supprimé et la catégorie repassera en statut Ouvert. Les inscriptions sont conservées."
-                        confirmLabel="Réinitialiser"
-                        confirmVariant="destructive"
-                        onConfirm={() => resetMutation.mutate(cat.id)}
-                        isLoading={resetMutation.isPending}
-                      />
-                    )}
-                    {['COMPLETED', 'CANCELLED'].includes(cat.status) && (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </div>
-                </td>
+        <>
+          {/* Tableau — desktop */}
+          <div className="hidden md:block rounded-lg border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+              <tr>
+                <th className="px-4 py-2.5 text-left font-medium">Nom</th>
+                <th className="px-4 py-2.5 text-left font-medium">Genre</th>
+                <th className="px-4 py-2.5 text-left font-medium">Années</th>
+                <th className="px-4 py-2.5 text-left font-medium">Inscrits</th>
+                <th className="px-4 py-2.5 text-left font-medium">Statut</th>
+                <th className="px-4 py-2.5 text-left font-medium">Actions</th>
               </tr>
+              </thead>
+              <tbody className="divide-y">
+              {categories.map((cat) => (
+                <tr key={cat.id} className="bg-background hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 font-medium">{cat.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {cat.gender ? GENDER_LABELS[cat.gender] : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground tabular-nums">{formatRange(cat)}</td>
+                  <td className="px-4 py-3 tabular-nums">
+                    {cat._count?.registrations ?? 0}
+                    {cat.maxParticipants ? <span className="text-muted-foreground"> / {cat.maxParticipants}</span> : ''}
+                  </td>
+                  <td className="px-4 py-3">
+                    <CategoryStatusBadge status={cat.status}/>
+                  </td>
+                  <td className="px-4 py-3">
+                    {renderActions(cat)}
+                  </td>
+                </tr>
+              ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Cartes — mobile */}
+          <div className="md:hidden space-y-2">
+            {categories.map((cat) => (
+              <div key={cat.id} className="rounded-lg border bg-background p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium">{cat.name}</span>
+                  <CategoryStatusBadge status={cat.status}/>
+                </div>
+                <dl className="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Genre</dt>
+                    <dd>{cat.gender ? GENDER_LABELS[cat.gender] : '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Années</dt>
+                    <dd className="tabular-nums">{formatRange(cat)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Inscrits</dt>
+                    <dd className="tabular-nums">
+                      {cat._count?.registrations ?? 0}
+                      {cat.maxParticipants ? <span className="text-muted-foreground"> / {cat.maxParticipants}</span> : ''}
+                    </dd>
+                  </div>
+                </dl>
+                {renderActions(cat)}
+              </div>
             ))}
-            </tbody>
-          </table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

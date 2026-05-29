@@ -9,48 +9,57 @@ const BracketView = ({bracketMap, totalRounds}) => {
   const [lines, setLines] = useState([]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const computeLines = () => {
+      const container = containerRef.current;
+      if (!container) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const newLines = [];
+      const containerRect = container.getBoundingClientRect();
+      const newLines = [];
 
-    bracketMap.forEach((matches, round) => {
-      if (round >= totalRounds) return;
-      const nextRoundMatches = bracketMap.get(round + 1);
-      if (!nextRoundMatches) return;
+      bracketMap.forEach((matches, round) => {
+        if (round >= totalRounds) return;
+        const nextRoundMatches = bracketMap.get(round + 1);
+        if (!nextRoundMatches) return;
 
-      matches.forEach((match, idx) => {
-        const targetMatch = nextRoundMatches[Math.floor(idx / 2)];
-        if (!targetMatch) return;
+        matches.forEach((match, idx) => {
+          const targetMatch = nextRoundMatches[Math.floor(idx / 2)];
+          if (!targetMatch) return;
 
-        const sourceEl = cardRefs.current.get(match.id);
-        const targetEl = cardRefs.current.get(targetMatch.id);
-        if (!sourceEl || !targetEl) return;
+          const sourceEl = cardRefs.current.get(match.id);
+          const targetEl = cardRefs.current.get(targetMatch.id);
+          if (!sourceEl || !targetEl) return;
 
-        const sourceRect = sourceEl.getBoundingClientRect();
-        const targetRect = targetEl.getBoundingClientRect();
+          const sourceRect = sourceEl.getBoundingClientRect();
+          const targetRect = targetEl.getBoundingClientRect();
 
-        const x1 = sourceRect.right - containerRect.left;
-        const y1 = sourceRect.top + sourceRect.height / 2 - containerRect.top;
-        const x2 = targetRect.left - containerRect.left;
-        const y2 = targetRect.top + targetRect.height / 2 - containerRect.top;
-        const midX = (x1 + x2) / 2;
+          const x1 = sourceRect.right - containerRect.left;
+          const y1 = sourceRect.top + sourceRect.height / 2 - containerRect.top;
+          const x2 = targetRect.left - containerRect.left;
+          const y2 = targetRect.top + targetRect.height / 2 - containerRect.top;
+          const midX = (x1 + x2) / 2;
 
-        newLines.push({
-          path: `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`,
-          isCompleted: match.status === 'COMPLETED',
-          key: `${match.id}-${targetMatch.id}`,
+          newLines.push({
+            path: `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`,
+            isCompleted: match.status === 'COMPLETED',
+            key: `${match.id}-${targetMatch.id}`,
+          });
         });
       });
-    });
 
-    setLines(newLines);
+      setLines(newLines);
+    };
+
+    computeLines();
+    window.addEventListener('resize', computeLines);
+    return () => window.removeEventListener('resize', computeLines);
   }, [bracketMap, totalRounds]);
 
   return (
     <div ref={containerRef} className="relative overflow-x-auto">
-      <div className="flex gap-8 min-w-max p-4">
+      <p className="text-xs text-muted-foreground text-center mb-1 md:hidden">
+        ← faites défiler horizontalement →
+      </p>
+      <div className="flex gap-4 sm:gap-8 min-w-max p-4">
         {[...bracketMap.entries()].map(([round, matches]) => (
           <div key={round} className="flex flex-col">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 text-center">
@@ -67,7 +76,7 @@ const BracketView = ({bracketMap, totalRounds}) => {
                     if (el) cardRefs.current.set(match.id, el);
                     else cardRefs.current.delete(match.id);
                   }}
-                  className="w-52"
+                  className="w-44 sm:w-52"
                 >
                   <CardContent className="p-3 flex flex-col gap-1">
                     {[0, 1].map((slot) => {

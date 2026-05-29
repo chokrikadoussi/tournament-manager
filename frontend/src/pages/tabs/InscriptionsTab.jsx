@@ -437,7 +437,7 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
       )}
 
       {/* Compteur + import CSV */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           {confirmedRegs.length} inscrit{confirmedRegs.length !== 1 ? 's' : ''}
           {waitlistRegs.length > 0 && (
@@ -482,8 +482,8 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
 
       {/* Filtres + tri */}
       {registrations.length > 0 && (
-        <div className="flex flex-wrap gap-2 items-center">
-          <div className="relative flex-1 min-w-40">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
+          <div className="relative w-full sm:flex-1 sm:min-w-40">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Rechercher par nom ou club…"
@@ -493,7 +493,7 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
             />
           </div>
           <Select value={tableCategory} onValueChange={setTableCategory}>
-            <SelectTrigger className="h-9 w-48">
+            <SelectTrigger className="h-9 w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -504,6 +504,25 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
               {categoriesData.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          {/* Tri — mobile uniquement (sur desktop, les en-têtes de colonnes sont triables) */}
+          <Select
+            value={`${tableSort}-${tableSortDir}`}
+            onValueChange={(v) => {
+              const [col, dir] = v.split('-');
+              setTableSort(col);
+              setTableSortDir(dir);
+            }}
+          >
+            <SelectTrigger className="h-9 w-full md:hidden">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name-asc">Nom (A → Z)</SelectItem>
+              <SelectItem value="name-desc">Nom (Z → A)</SelectItem>
+              <SelectItem value="category-asc">Catégorie (A → Z)</SelectItem>
+              <SelectItem value="seed-asc">Classement (croissant)</SelectItem>
             </SelectContent>
           </Select>
           {hasActiveFilter && (
@@ -535,7 +554,8 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
           </Button>
         </div>
       ) : (
-        <div className="rounded-lg border overflow-x-auto">
+        <>
+        <div className="hidden md:block rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
@@ -664,6 +684,110 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
             </tbody>
           </table>
         </div>
+
+        {/* Cartes — mobile */}
+        <div className="md:hidden space-y-2">
+          {sortedRegs.map((reg, idx) => {
+            const c = reg.competitor;
+            const assignedCategory = categoriesData.find((cat) => cat.id === reg.categoryId);
+            const isWaitlist = !reg.categoryId;
+            const showSeparator = isWaitlist && filteredConfirmed.length > 0 && idx === filteredConfirmed.length;
+            return (
+              <React.Fragment key={reg.id}>
+                {showSeparator && (
+                  <div className="flex items-center gap-2 rounded-md bg-yellow-50 border border-yellow-200 px-3 py-2">
+                    <span className="text-xs font-semibold text-yellow-700 uppercase tracking-wide">
+                      Liste d'attente
+                    </span>
+                    <span className="text-xs text-yellow-600">
+                      — {filteredWaitlist.length} sans catégorie
+                    </span>
+                  </div>
+                )}
+                <div className={`rounded-lg border p-3 space-y-3 ${isWaitlist ? 'bg-yellow-50/40' : 'bg-background'}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{c.name}</p>
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {c.gender ? GENDER_LABELS[c.gender] : '—'}
+                        {c.birthYear ? ` · ${c.birthYear}` : ''}
+                        {c.club ? ` · ${c.club}` : ''}
+                      </p>
+                    </div>
+                    <CompetitorTypeBadge type={c.type} />
+                  </div>
+
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                    <div className="grid gap-1">
+                      <Label className="text-xs text-muted-foreground">Catégorie</Label>
+                      {canAssign && openCategories.length > 0 ? (
+                        <Select
+                          value={reg.categoryId ?? '__none__'}
+                          onValueChange={(v) => handleCategoryChange(c.id, v)}
+                          disabled={setCategoryMutation.isPending}
+                        >
+                          <SelectTrigger className="h-8 w-full text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">
+                              <span className="text-yellow-600">Liste d'attente</span>
+                            </SelectItem>
+                            {openCategories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : assignedCategory ? (
+                        <Badge variant="outline">{assignedCategory.name}</Badge>
+                      ) : (
+                        <WaitlistBadge />
+                      )}
+                    </div>
+                    <div className="grid gap-1">
+                      <Label className="text-xs text-muted-foreground">Classement</Label>
+                      <Input
+                        key={reg.id + '-' + (reg.seed ?? 'null')}
+                        type="number"
+                        className="h-8 w-20 text-xs"
+                        defaultValue={reg.seed || ''}
+                        onBlur={(e) => handleSeedChange(e, c.id)}
+                        placeholder="—"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2"
+                      onClick={() => openEdit(reg)}
+                    >
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" />Modifier
+                    </Button>
+                    {canUnregister && (
+                      <ConfirmActionDialog
+                        trigger={
+                          <Button size="sm" variant="destructive" className="ml-auto" disabled={unregisterMutation.isPending}>
+                            Désinscrire
+                          </Button>
+                        }
+                        title="Désinscrire le compétiteur ?"
+                        description="Cette action est irréversible et supprimera les données d'inscription associées."
+                        confirmLabel="Désinscrire"
+                        confirmVariant="destructive"
+                        onConfirm={() => unregisterMutation.mutate(c.id)}
+                        isLoading={unregisterMutation.isPending}
+                      />
+                    )}
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
+        </>
       )}
 
       {/* ── Dialog d'édition compétiteur ────────────────────────────────────── */}
@@ -745,7 +869,7 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
             </div>
 
             {/* Année + Club côte à côte */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="edit-year">Année de naissance</Label>
                 <Input
@@ -852,7 +976,7 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
             </div>
           ) : previewData && (
             <div className="space-y-3">
-              <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                 <div className="rounded-lg border bg-green-50 p-3">
                   <p className="text-xl font-bold text-green-700">{previewData.created}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">à créer</p>
