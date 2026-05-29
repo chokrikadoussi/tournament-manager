@@ -5,7 +5,9 @@ import { TournamentStatus, Gender } from '../generated/prisma/client.js';
 
 const GENDER_MAP = {
   m: Gender.MALE, masculin: Gender.MALE, male: Gender.MALE, homme: Gender.MALE, h: Gender.MALE,
+  garcon: Gender.MALE, 'garçon': Gender.MALE,
   f: Gender.FEMALE, feminin: Gender.FEMALE, féminin: Gender.FEMALE, female: Gender.FEMALE, femme: Gender.FEMALE,
+  fille: Gender.FEMALE,
 };
 
 function parseGender(raw) {
