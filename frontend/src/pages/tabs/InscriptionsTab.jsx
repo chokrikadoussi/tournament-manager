@@ -21,9 +21,33 @@ import { toastSuccess, toastError } from '@/lib/toast.js';
 import ConfirmActionDialog from '@/components/ConfirmActionDialog.jsx';
 import CompetitorTypeBadge from '@/components/CompetitorTypeBadge.jsx';
 import TableSkeleton from '@/components/TableSkeleton.jsx';
-import { Users, Upload, Loader2, AlertTriangle, Info, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Pencil } from 'lucide-react';
+import { Users, Upload, Loader2, AlertTriangle, Info, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Pencil, Download } from 'lucide-react';
 
 const GENDER_LABELS = { MALE: 'M', FEMALE: 'F', MIXED: 'MX' };
+
+// ── Helpers CSV (modèle + export erreurs) ───────────────────────────────────────
+const CSV_TEMPLATE =
+  'prenom,nom,genre,datenaissance,club\n' +
+  'Adam,Benali,M,2011,Taekwondo Club Paris 15\n' +
+  'Sarah,Dubois,F,2012,ATC Versailles\n';
+
+const escapeCSV = (val) => {
+  const s = String(val ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+const downloadCSV = (filename, content) => {
+  // BOM pour qu'Excel ouvre l'UTF-8 correctement
+  const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
 
 const WaitlistBadge = () => (
   <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200">Liste d'attente</Badge>
@@ -423,7 +447,7 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
           )}
         </p>
         {canImport && (
-          <>
+          <div className="flex items-center gap-2">
             <input
               ref={csvInputRef}
               type="file"
@@ -431,6 +455,15 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
               className="hidden"
               onChange={handleCSVChange}
             />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => downloadCSV('modele-inscriptions.csv', CSV_TEMPLATE)}
+              title="Télécharger un fichier CSV d'exemple"
+            >
+              <Download className="h-4 w-4 mr-2" />Modèle CSV
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -443,7 +476,7 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
                 <><Upload className="h-4 w-4 mr-2" />Importer CSV</>
               )}
             </Button>
-          </>
+          </div>
         )}
       </div>
 
@@ -841,12 +874,31 @@ const InscriptionsTab = ({ tournamentId, tournamentStatus }) => {
               </div>
 
               {previewData.errors.length > 0 && (
-                <div className="max-h-36 overflow-y-auto rounded-lg border bg-destructive/5 p-3 space-y-1">
-                  {previewData.errors.map((e, i) => (
-                    <p key={i} className="text-xs text-destructive">
-                      <span className="font-medium">Ligne {e.line} :</span> {e.message}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-destructive">
+                      {previewData.errors.length} erreur{previewData.errors.length > 1 ? 's' : ''} détectée{previewData.errors.length > 1 ? 's' : ''}
                     </p>
-                  ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-muted-foreground"
+                      onClick={() => downloadCSV(
+                        'erreurs-import.csv',
+                        'ligne,message\n' +
+                          previewData.errors.map((e) => `${escapeCSV(e.line)},${escapeCSV(e.message)}`).join('\n') + '\n',
+                      )}
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
+                    </Button>
+                  </div>
+                  <div className="max-h-36 overflow-y-auto rounded-lg border bg-destructive/5 p-3 space-y-1">
+                    {previewData.errors.map((e, i) => (
+                      <p key={i} className="text-xs text-destructive">
+                        <span className="font-medium">Ligne {e.line} :</span> {e.message}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
