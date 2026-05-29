@@ -119,7 +119,7 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   const finalX = (PW - FW) / 2;
   const finalY = BT + BH / 2;
 
-  const STRIP = 2.2;
+  const STRIP = 3.0;
 
   // ── MATCH BOX ──────────────────────────────────────────────────────────────
   const drawBox = (x, y, match, side = 'left', w = MW) => {
@@ -160,6 +160,12 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
         pdf.setFillColor(...sColor);
         pdf.rect(stripX, slotY, STRIP, MH / 2, 'F');
       }
+
+      // ── Lettre B / R dans le bandeau (lisible en impression N&B) ──
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(4.5);
+      pdf.setTextColor(...WHITE);
+      pdf.text(slot === 0 ? 'B' : 'R', stripX + STRIP / 2, slotY + MH / 4 + 1.3, { align: 'center' });
 
       const availW = w - STRIP - 2.5;
       const maxCh  = Math.floor(availW / 1.72);
