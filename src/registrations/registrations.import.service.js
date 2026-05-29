@@ -97,6 +97,15 @@ async function _runImport(db, tournamentId, rows, tournament, mode) {
       continue;
     }
 
+    const currentYear = new Date().getFullYear();
+    if (birthYear < 1900 || birthYear > currentYear) {
+      results.errors.push({
+        line,
+        message: `Année de naissance hors limites : ${birthYear} (attendu 1900–${currentYear})`,
+      });
+      continue;
+    }
+
     const categoryId = gender ? resolveCategory(tournament.categories, gender, birthYear) : null;
 
     try {

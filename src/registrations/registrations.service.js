@@ -68,7 +68,7 @@ export const register = async (tournamentId, competitorId) => {
     );
   }
 
-  // 3) Vérifier max participants
+  // 3) Vérifier max participants — tournoi
   const registrationCount = await prisma.tournamentRegistration.count({
     where: { tournamentId },
   });
@@ -78,6 +78,19 @@ export const register = async (tournamentId, competitorId) => {
     registrationCount >= tournament.maxParticipants
   ) {
     throw new AppError('Tournament is full', 400);
+  }
+
+  // 3bis) Vérifier max participants — catégorie (bascule en liste d'attente si pleine)
+  if (categoryId) {
+    const category = competitorCategories[0];
+    if (category.maxParticipants) {
+      const categoryCount = await prisma.tournamentRegistration.count({
+        where: { tournamentId, categoryId },
+      });
+      if (categoryCount >= category.maxParticipants) {
+        categoryId = undefined; // catégorie pleine → liste d'attente
+      }
+    }
   }
 
   // 4) Créer l'inscription + vérif si déjà inscrit (contrainte d'unicité)
