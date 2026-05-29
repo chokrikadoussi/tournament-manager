@@ -172,9 +172,22 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
 
   if (!isActive) {
     return (
-      <p className="text-sm text-muted-foreground py-4">
-        Le bracket sera disponible une fois le tournoi démarré.
-      </p>
+      <div className="flex flex-col items-center gap-3 py-14 text-muted-foreground border rounded-lg">
+        <Trophy className="h-10 w-10" aria-hidden="true" />
+        <div className="text-center space-y-1">
+          <p className="font-medium text-foreground">Tournoi pas encore démarré</p>
+          <p className="text-sm">
+            Le bracket se génère au démarrage du tournoi. Vérifiez vos inscriptions
+            et vos catégories, puis démarrez le tournoi depuis l'onglet&nbsp;<strong>Général</strong>.
+          </p>
+        </div>
+        {onSwitchTab && (
+          <Button variant="outline" size="sm" onClick={() => onSwitchTab('general')}>
+            Aller à l'onglet Général
+            <ArrowRight className="h-4 w-4 ml-1.5" />
+          </Button>
+        )}
+      </div>
     );
   }
 

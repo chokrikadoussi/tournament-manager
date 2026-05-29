@@ -32,7 +32,7 @@ function formatDateFR(iso) {
 function slugify(str) {
   return str
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{M}/gu, '') // retire les marques combinantes (accents)
     .replace(/\s+/g, '-')
     .toLowerCase();
 }
