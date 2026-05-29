@@ -4,6 +4,7 @@ const ROUND_LABEL = (r, total) => {
   if (d === 1) return 'Demi-Finale';
   if (d === 2) return 'Quart de Finale';
   if (d === 3) return '1/8 de Finale';
+  if (d === 4) return '1/16 de Finale';
   return `Round ${r}`;
 };
 
@@ -47,14 +48,14 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   const HH       = BANNER_H;
   const FH       = 22;
   const MH       = 13;
-  const FW       = 54;
+  const FW       = 42;
   const BT       = HH;
   const BH       = PH - HH - FH;
 
   const sideR     = Math.max(totalRounds - 1, 1);
   const sideAvail = (PW - 2 * M - FW) / 2;
   const colW      = sideAvail / sideR;
-  const MW        = colW * 0.68;
+  const MW        = colW * 0.84;
 
   // White page base
   pdf.setFillColor(...WHITE);
@@ -166,32 +167,33 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
       pdf.setTextColor(...WHITE);
       pdf.text(slot === 0 ? 'B' : 'R', stripX + STRIP / 2, slotY + MH / 4 + 1.3, { align: 'center' });
 
-      const availW = w - STRIP - 2.5;
-      const maxCh  = Math.floor(availW / 1.72);
+      // ── Nom complet : on réduit la police pour faire tenir prénom + nom ──
       const raw    = name ?? (isBye ? 'BYE' : '—');
-      const label  = raw.length > maxCh ? raw.slice(0, maxCh - 1) + '…' : raw;
+      const availW = w - STRIP - 4;
+      const padX   = STRIP + 2;
 
       pdf.setFont('helvetica', isWin ? 'bold' : 'normal');
-      pdf.setFontSize(6.5);
-      pdf.setTextColor(...(isTbd || isBye ? [162, 164, 175] : DARK));
-      if (isRight) {
-        pdf.text(label, bx + w - STRIP - 2, slotY + MH / 4 + 1.3, { align: 'right' });
-      } else {
-        pdf.text(label, bx + STRIP + 2, slotY + MH / 4 + 1.3);
+      let fs = 6.5;
+      pdf.setFontSize(fs);
+      while (fs > 4.0 && pdf.getTextWidth(raw) > availW) {
+        fs -= 0.25;
+        pdf.setFontSize(fs);
       }
 
-      const club = p?.competitor?.club;
-      if (club && !isBye && !isTbd) {
-        const maxC = Math.floor(availW / 1.38);
-        const cl   = club.length > maxC ? club.slice(0, maxC - 1) + '…' : club;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(4.5);
-        pdf.setTextColor(...MID);
-        if (isRight) {
-          pdf.text(cl, bx + w - STRIP - 2, slotY + MH / 4 + 4.4, { align: 'right' });
-        } else {
-          pdf.text(cl, bx + STRIP + 2, slotY + MH / 4 + 4.4);
+      // Cas extrême : nom encore trop long à la police minimale → ellipse
+      let label = raw;
+      if (pdf.getTextWidth(label) > availW) {
+        while (label.length > 1 && pdf.getTextWidth(label + '…') > availW) {
+          label = label.slice(0, -1);
         }
+        label += '…';
+      }
+
+      pdf.setTextColor(...(isTbd || isBye ? [162, 164, 175] : DARK));
+      if (isRight) {
+        pdf.text(label, bx + w - padX, slotY + MH / 4 + 1.3, { align: 'right' });
+      } else {
+        pdf.text(label, bx + padX, slotY + MH / 4 + 1.3);
       }
     });
   };
