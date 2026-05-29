@@ -44,8 +44,7 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   const M  = 7;
 
   const BANNER_H = 22;
-  const INFO_H   = 11;
-  const HH       = BANNER_H + INFO_H;
+  const HH       = BANNER_H;
   const FH       = 22;
   const MH       = 13;
   const FW       = 54;
@@ -73,43 +72,43 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   pdf.setFillColor(...HONG);
   pdf.rect(PW / 2, BANNER_H - 1.8, PW / 2, 1.8, 'F');
 
-  const hasTournamentName = tournamentName && tournamentName !== categoryName;
+  // Date + Lieu — coin haut-gauche, symétrique au nom du tournoi
+  {
+    const metaItems = [];
+    if (date) metaItems.push(formatDateFR(date));
+    if (lieu) metaItems.push(lieu);
+    if (metaItems.length > 0) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(180, 205, 255);
+      pdf.text(metaItems.join('  ·  '), M, 5.5);
+    }
+  }
 
-  if (hasTournamentName) {
+  // Nom du tournoi — coin haut-droit, discret
+  if (tournamentName && tournamentName !== categoryName) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(180, 205, 255);
+    pdf.text(tournamentName, PW - M, 5.5, { align: 'right' });
+  }
+
+  // Catégorie — titre principal centré
+  if (aire) {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(15);
     pdf.setTextColor(...WHITE);
-    pdf.text(tournamentName, PW / 2, 10, { align: 'center' });
+    pdf.text(categoryName, PW / 2, 10, { align: 'center' });
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
     pdf.setTextColor(180, 205, 255);
-    pdf.text(categoryName, PW / 2, 17.5, { align: 'center' });
+    pdf.text(`Aire N° ${aire}`, PW / 2, 17.5, { align: 'center' });
   } else {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(15);
     pdf.setTextColor(...WHITE);
     pdf.text(categoryName, PW / 2, 13, { align: 'center' });
-  }
-
-  // ── INFO BAR ───────────────────────────────────────────────────────────────
-  pdf.setFillColor(...BG_INFO);
-  pdf.rect(0, BANNER_H, PW, INFO_H, 'F');
-
-  pdf.setDrawColor(...LIGHT);
-  pdf.setLineWidth(0.25);
-  pdf.line(0, BANNER_H + INFO_H, PW, BANNER_H + INFO_H);
-
-  const infoItems = [];
-  if (date) infoItems.push(`Date : ${formatDateFR(date)}`);
-  if (lieu) infoItems.push(`Lieu : ${lieu}`);
-  if (aire) infoItems.push(`Aire N° ${aire}`);
-
-  if (infoItems.length > 0) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(...MID);
-    pdf.text(infoItems.join('     •     '), PW / 2, BANNER_H + INFO_H / 2 + 1.5, { align: 'center' });
   }
 
   // ── GEOMETRY ───────────────────────────────────────────────────────────────
@@ -332,46 +331,6 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
       .filter(Boolean);
     if (bronzeNames.length > 0)
       drawMedal(PW / 2 + 56, BRNZ_C, 'BRONZE', bronzeNames);
-  }
-
-  // ── LÉGENDE (bas-gauche) ────────────────────────────────────────────────────
-  {
-    const lgX  = M;
-    const lgY0 = footerY + 10.5;
-    const lgY1 = footerY + 15;
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(4.5);
-    pdf.setTextColor(...MID);
-    pdf.text('LÉGENDE', lgX, lgY0);
-
-    const legendItems = [
-      { code: 'PTF', desc: 'Corps' },
-      { code: 'PTG', desc: 'Tête' },
-      { code: 'KO',  desc: 'K.O.' },
-      { code: 'RSC', desc: 'Supér.' },
-      { code: 'DSQ', desc: 'Disqual.' },
-      { code: 'WD',  desc: 'Abandon' },
-    ];
-
-    pdf.setFontSize(4.0);
-    let lgCurX = lgX;
-    legendItems.forEach((item, i) => {
-      if (i > 0) {
-        pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(...LIGHT);
-        pdf.text('  ·  ', lgCurX, lgY1);
-        lgCurX += pdf.getTextWidth('  ·  ');
-      }
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(...DARK);
-      pdf.text(item.code, lgCurX, lgY1);
-      lgCurX += pdf.getTextWidth(item.code);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(...MID);
-      pdf.text(' ' + item.desc, lgCurX, lgY1);
-      lgCurX += pdf.getTextWidth(' ' + item.desc);
-    });
   }
 
   // Competitor count (bottom-right)
