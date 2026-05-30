@@ -15,6 +15,9 @@ const remove = (tournamentId, categoryId) =>
 const open = (tournamentId, categoryId) =>
   api.post(`/tournaments/${tournamentId}/categories/${categoryId}/open`);
 
+const openAll = (tournamentId) =>
+  api.post(`/tournaments/${tournamentId}/categories/open-all`);
+
 const close = (tournamentId, categoryId) =>
   api.post(`/tournaments/${tournamentId}/categories/${categoryId}/close`);
 

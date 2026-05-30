@@ -124,6 +124,16 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
     onError: (e) => toastError(e.error || 'Erreur lors de l\'ouverture'),
   });
 
+  const openAllMutation = useMutation({
+    mutationFn: () => categoriesApi.openAll(tournamentId),
+    onSuccess: (res) => {
+      invalidateCategories();
+      const n = res?.opened ?? 0;
+      toastSuccess(n > 0 ? `${n} catégorie${n > 1 ? 's' : ''} ouverte${n > 1 ? 's' : ''}` : 'Aucune catégorie à ouvrir');
+    },
+    onError: (e) => toastError(e.error || 'Erreur lors de l\'ouverture'),
+  });
+
   const closeMutation = useMutation({
     mutationFn: (categoryId) => categoriesApi.close(tournamentId, categoryId),
     onSuccess: () => {
@@ -275,6 +285,17 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
         <p className="text-sm text-muted-foreground">
           {categories.length} catégorie{categories.length !== 1 ? 's' : ''}
         </p>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+        {canOpen && categories.some((c) => c.status === 'DRAFT') && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openAllMutation.mutate()}
+            disabled={openAllMutation.isPending}
+          >
+            Ouvrir toutes les catégories
+          </Button>
+        )}
         {canCreate && (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
@@ -296,6 +317,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
             </DialogContent>
           </Dialog>
         )}
+        </div>
       </div>
 
       {/* Edit dialog */}

@@ -11,6 +11,7 @@ router.get('/:categoryId', asyncWrap(controller.getById));
 router.patch('/:categoryId', writeLimiter, asyncWrap(controller.updateById));
 router.delete('/:categoryId', writeLimiter, asyncWrap(controller.deleteById));
 
+router.post('/open-all', writeLimiter, asyncWrap(controller.bulkOpen));
 router.post('/:categoryId/open', writeLimiter, asyncWrap(controller.openCategory));
 router.post('/:categoryId/close', writeLimiter, asyncWrap(controller.closeCategory));
 router.post('/:categoryId/start', writeLimiter, asyncWrap(controller.startCategory));

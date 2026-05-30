@@ -168,6 +168,22 @@ export const openCategory = async (tournamentId, categoryId) => {
   });
 };
 
+export const bulkOpen = async (tournamentId) => {
+  const tournament = await tournamentService.getById(tournamentId);
+
+  if (tournament.status !== TournamentStatus.OPEN) {
+    throw new AppError('Le tournoi doit être ouvert pour ouvrir les catégories', 409);
+  }
+
+  // Ouvre en une fois toutes les catégories encore en brouillon.
+  const { count } = await prisma.category.updateMany({
+    where: { tournamentId, status: TournamentStatus.DRAFT },
+    data: { status: TournamentStatus.OPEN },
+  });
+
+  return { opened: count };
+};
+
 export const closeCategory = async (tournamentId, categoryId) => {
   await tournamentService.getById(tournamentId);
 

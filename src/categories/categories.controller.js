@@ -66,6 +66,12 @@ export const openCategory = async (req, res) => {
   res.json(category);
 };
 
+export const bulkOpen = async (req, res) => {
+  const { id } = req.params;
+  const result = await service.bulkOpen(id);
+  res.json(result);
+};
+
 export const closeCategory = async (req, res) => {
   const { id, categoryId } = req.params;
   const category = await service.closeCategory(id, categoryId);
