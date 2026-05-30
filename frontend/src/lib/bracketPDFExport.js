@@ -5,6 +5,7 @@ const ROUND_LABEL = (r, total) => {
   if (d === 2) return 'Quart de Finale';
   if (d === 3) return '1/8 de Finale';
   if (d === 4) return '1/16 de Finale';
+  if (d === 5) return '1/32 de Finale';
   return `Round ${r}`;
 };
 
@@ -40,7 +41,7 @@ function slugify(str) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Core drawing function — operates on an existing jsPDF instance / current page
 // ─────────────────────────────────────────────────────────────────────────────
-function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName = '', lieu = '', date = '', aire = '' }) {
+function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName = '', lieu = '', date = '', aire = '', absorbByes = true, showCount = true }) {
   const PW = 297, PH = 210;
   const M  = 7;
 
@@ -59,7 +60,7 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   // à gauche/droite de leur slot cible.
   const round1        = bracketMap.get(1) ?? [];
   const round1HasByes = round1.some((m) => m.status === 'BYE' || m.participants.length < 2);
-  const absorb        = round1HasByes && totalRounds >= 3;
+  const absorb        = absorbByes && round1HasByes && totalRounds >= 3;
   const startRound    = absorb ? 2 : 1;
   const displayRounds = totalRounds - startRound + 1;
   const prelimMatches = absorb ? round1.filter((m) => m.participants.length === 2) : [];
@@ -406,12 +407,82 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   }
 
   // Competitor count (bottom-right)
-  const totalComp = (bracketMap.get(1) ?? [])
-    .reduce((acc, m) => acc + m.participants.filter((p) => p.competitor).length, 0);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(5.5);
-  pdf.setTextColor(185, 187, 198);
-  pdf.text(`${totalComp} compétiteurs`, PW - M, PH - 2.5, { align: 'right' });
+  if (showCount) {
+    const totalComp = (bracketMap.get(1) ?? [])
+      .reduce((acc, m) => acc + m.participants.filter((p) => p.competitor).length, 0);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(5.5);
+    pdf.setTextColor(185, 187, 198);
+    pdf.text(`${totalComp} compétiteurs`, PW - M, PH - 2.5, { align: 'right' });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REPÊCHAGE — bracket vide (2e médaille de bronze), dimensionné pour les perdants
+// du tour préliminaire + du 1er tour. Rendu uniquement sur le PDF, à remplir main.
+// ─────────────────────────────────────────────────────────────────────────────
+function nextPow2(n) {
+  if (n <= 1) return 1;
+  return 1 << Math.ceil(Math.log2(n));
+}
+
+// Nombre de combattants repêchés = perdants "préliminaire" + perdants "1er tour",
+// en excluant toujours la demi-finale (round = totalRounds - 1) pour ne pas
+// chevaucher la petite finale.
+function repechageLoserCount(bracketMap, totalRounds) {
+  const r1 = bracketMap.get(1) ?? [];
+  const r2 = bracketMap.get(2) ?? [];
+  const hasPrelim = r1.some((m) => m.status === 'BYE' || m.participants.length < 2) && totalRounds >= 3;
+
+  let losers = 0;
+  if (hasPrelim) {
+    // préliminaire = vrais matchs du round 1 ; 1er tour = round 2
+    losers += r1.filter((m) => m.participants.length === 2).length;
+    if (totalRounds >= 4) losers += r2.length; // round 2 seulement s'il précède la demie
+  } else if (totalRounds >= 3) {
+    // pas de préliminaire : 1er tour = round 1 (avant la demie)
+    losers += r1.length;
+  }
+  return losers;
+}
+
+// Construit un bracket VIDE (aucun participant) d'une taille donnée.
+function buildEmptyBracketMap(size) {
+  const rounds = Math.log2(size);
+  const map = new Map();
+  for (let r = 1; r <= rounds; r++) {
+    const count = size / Math.pow(2, r);
+    const matches = [];
+    for (let pos = 0; pos < count; pos++) {
+      matches.push({ id: `rep-${r}-${pos}`, round: r, position: pos, status: 'PENDING', winnerId: null, participants: [] });
+    }
+    map.set(r, matches);
+  }
+  return { map, rounds };
+}
+
+// Ajoute (si pertinent) une page "Repêchage" pour une catégorie. Renvoie true si
+// une page a été dessinée.
+function _drawRepechagePage(pdf, { bracketMap, totalRounds, categoryName, tournamentName = '', lieu = '', date = '', aire = '' }) {
+  const losers = repechageLoserCount(bracketMap, totalRounds);
+  if (losers < 2) return false; // pas assez de repêchés pour un bracket
+
+  const size = nextPow2(losers);
+  const { map, rounds } = buildEmptyBracketMap(size);
+
+  pdf.addPage('a4', 'landscape');
+  _drawPage(pdf, {
+    bracketMap: map,
+    totalRounds: rounds,
+    categoryName: `${categoryName} — Repêchage`,
+    tournamentName,
+    lieu,
+    date,
+    aire,
+    absorbByes: false, // bracket vide : ne pas interpréter les cases vides comme des BYE
+    showCount: false,
+  });
+  return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -421,6 +492,7 @@ export async function exportBracketPDF(params) {
   const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   _drawPage(pdf, params);
+  _drawRepechagePage(pdf, params); // 2e bracket vide (repêchage)
 
   const { tournamentName = '', categoryName, date = '' } = params;
   const parts = [
@@ -442,7 +514,9 @@ export async function exportAllBracketsPDF({ categories, tournamentName = '', li
   categories.forEach((cat, i) => {
     if (i > 0) pdf.addPage('a4', 'landscape');
     // Aire propre à la catégorie si fournie, sinon repli sur l'aire globale.
-    _drawPage(pdf, { ...cat, tournamentName, lieu, date, aire: cat.aire ?? aire });
+    const page = { ...cat, tournamentName, lieu, date, aire: cat.aire ?? aire };
+    _drawPage(pdf, page);
+    _drawRepechagePage(pdf, page); // 2e bracket vide (repêchage) après chaque catégorie
   });
 
   const slug     = slugify(tournamentName || 'tournoi');
