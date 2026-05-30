@@ -134,6 +134,22 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
     onError: (e) => toastError(e.error || 'Erreur lors de l\'ouverture'),
   });
 
+  const startAllMutation = useMutation({
+    mutationFn: () => categoriesApi.startAll(tournamentId),
+    onSuccess: (res) => {
+      invalidateCategories();
+      queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'bracket']});
+      const started = res?.started?.length ?? 0;
+      const failed = res?.failed ?? [];
+      if (started > 0) {
+        toastSuccess(`${started} catégorie${started > 1 ? 's' : ''} démarrée${started > 1 ? 's' : ''} — brackets générés`);
+      }
+      failed.slice(0, 3).forEach((f) => toastError(`${f.name} : ${f.reason}`));
+      if (failed.length > 3) toastError(`…et ${failed.length - 3} autre(s) échec(s)`);
+    },
+    onError: (e) => toastError(e.error || 'Erreur lors du démarrage'),
+  });
+
   const closeMutation = useMutation({
     mutationFn: (categoryId) => categoriesApi.close(tournamentId, categoryId),
     onSuccess: () => {
@@ -295,6 +311,20 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
           >
             Ouvrir toutes les catégories
           </Button>
+        )}
+        {canStart && categories.some((c) => c.status === 'OPEN') && (
+          <ConfirmActionDialog
+            trigger={
+              <Button size="sm" disabled={startAllMutation.isPending}>
+                Démarrer toutes les catégories
+              </Button>
+            }
+            title="Démarrer toutes les catégories ?"
+            description="Les brackets seront générés pour toutes les catégories ouvertes ayant au moins 2 inscrits. Cette action est irréversible."
+            confirmLabel="Démarrer tout"
+            onConfirm={() => startAllMutation.mutate()}
+            isLoading={startAllMutation.isPending}
+          />
         )}
         {canCreate && (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>

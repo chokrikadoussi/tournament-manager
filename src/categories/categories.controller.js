@@ -84,6 +84,12 @@ export const startCategory = async (req, res) => {
   res.json(category);
 };
 
+export const bulkStart = async (req, res) => {
+  const { id } = req.params;
+  const result = await service.bulkStart(id);
+  res.json(result);
+};
+
 export const cancelCategory = async (req, res) => {
   const { id, categoryId } = req.params;
   const category = await service.cancelCategory(id, categoryId);

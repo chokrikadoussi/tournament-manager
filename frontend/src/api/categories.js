@@ -24,10 +24,13 @@ const close = (tournamentId, categoryId) =>
 const start = (tournamentId, categoryId) =>
   api.post(`/tournaments/${tournamentId}/categories/${categoryId}/start`);
 
+const startAll = (tournamentId) =>
+  api.post(`/tournaments/${tournamentId}/categories/start-all`);
+
 const cancel = (tournamentId, categoryId) =>
   api.post(`/tournaments/${tournamentId}/categories/${categoryId}/cancel`);
 
 const reset = (tournamentId, categoryId) =>
   api.post(`/tournaments/${tournamentId}/categories/${categoryId}/reset`);
 
-export default { getAll, create, update, remove, open, close, start, cancel, reset };
+export default { getAll, create, update, remove, open, openAll, close, start, startAll, cancel, reset };
