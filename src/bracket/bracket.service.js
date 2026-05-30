@@ -137,27 +137,33 @@ export async function getBracket(tournamentId, format, categoryId) {
     return { tournamentId: tournament.id, format: 'visual', final: tree };
   }
 
-  const rounds = [];
-
-  for (let round = 1; round <= totalRounds; round++) {
-    const matches = await prisma.match.findMany({
-      where: { ...matchWhere, round },
-      select: {
-        id: true,
-        position: true,
-        status: true,
-        winnerId: true,
-        participants: {
-          select: {
-            slot: true,
-            competitorId: true,
-            competitor: { select: { name: true } },
-          },
+  // Une seule requête pour tous les rounds (évite le N+1 : on récupère tous les
+  // matchs d'un coup puis on les regroupe par round côté application).
+  const allMatches = await prisma.match.findMany({
+    where: matchWhere,
+    select: {
+      id: true,
+      round: true,
+      position: true,
+      status: true,
+      winnerId: true,
+      participants: {
+        select: {
+          slot: true,
+          competitorId: true,
+          competitor: { select: { name: true } },
         },
       },
-      orderBy: { position: 'asc' },
+    },
+    orderBy: [{ round: 'asc' }, { position: 'asc' }],
+  });
+
+  const rounds = [];
+  for (let round = 1; round <= totalRounds; round++) {
+    rounds.push({
+      round,
+      matches: allMatches.filter((m) => m.round === round),
     });
-    rounds.push({ round, matches });
   }
 
   return { tournamentId: tournament.id, totalRounds, rounds };
