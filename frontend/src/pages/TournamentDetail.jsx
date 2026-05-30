@@ -126,7 +126,7 @@ const TournamentDetail = () => {
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="categories">Catégories</TabsTrigger>
           <TabsTrigger value="inscriptions">Inscriptions</TabsTrigger>
-          <TabsTrigger value="brackets">Brackets</TabsTrigger>
+          <TabsTrigger value="brackets">Tirage</TabsTrigger>
         </TabsList>
 
         {/* ── GÉNÉRAL ── */}
@@ -142,7 +142,7 @@ const TournamentDetail = () => {
                     <ConfirmActionDialog
                       trigger={<Button disabled={startTournamentMutation.isPending}>Démarrer le tournoi</Button>}
                       title="Démarrer le tournoi ?"
-                      description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
+                      description="Le tirage sera généré et les inscriptions seront clôturées. Cette action est irréversible."
                       confirmLabel="Démarrer"
                       onConfirm={() => startTournamentMutation.mutate(tournamentId)}
                       isLoading={startTournamentMutation.isPending}
@@ -159,7 +159,7 @@ const TournamentDetail = () => {
                     <ConfirmActionDialog
                       trigger={<Button disabled={startTournamentMutation.isPending}>Démarrer le tournoi</Button>}
                       title="Démarrer le tournoi ?"
-                      description="Le bracket sera généré et les inscriptions seront clôturées. Cette action est irréversible."
+                      description="Le tirage sera généré et les inscriptions seront clôturées. Cette action est irréversible."
                       confirmLabel="Démarrer"
                       onConfirm={() => startTournamentMutation.mutate(tournamentId)}
                       isLoading={startTournamentMutation.isPending}
@@ -177,7 +177,7 @@ const TournamentDetail = () => {
                     </Button>
                   }
                   title="Annuler le tournoi ?"
-                  description="Le tournoi sera marqué comme annulé. Les inscriptions et brackets sont conservés mais le tournoi ne pourra plus progresser."
+                  description="Le tournoi sera marqué comme annulé. Les inscriptions et tirages sont conservés mais le tournoi ne pourra plus progresser."
                   confirmLabel="Annuler le tournoi"
                   confirmVariant="destructive"
                   onConfirm={() => cancelMutation.mutate()}

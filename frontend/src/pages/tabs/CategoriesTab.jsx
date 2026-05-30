@@ -142,7 +142,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
       const started = res?.started?.length ?? 0;
       const failed = res?.failed ?? [];
       if (started > 0) {
-        toastSuccess(`${started} catégorie${started > 1 ? 's' : ''} démarrée${started > 1 ? 's' : ''} — brackets générés`);
+        toastSuccess(`${started} catégorie${started > 1 ? 's' : ''} démarrée${started > 1 ? 's' : ''} — tirages générés`);
       }
       failed.slice(0, 3).forEach((f) => toastError(`${f.name} : ${f.reason}`));
       if (failed.length > 3) toastError(`…et ${failed.length - 3} autre(s) échec(s)`);
@@ -163,7 +163,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
     mutationFn: (categoryId) => categoriesApi.start(tournamentId, categoryId),
     onSuccess: () => {
       invalidateCategories();
-      toastSuccess('Catégorie démarrée — bracket généré');
+      toastSuccess('Catégorie démarrée — tirage généré');
     },
     onError: (e) => toastError(e.error || 'Erreur lors du démarrage'),
   });
@@ -182,7 +182,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
     onSuccess: () => {
       invalidateCategories();
       queryClient.invalidateQueries({queryKey: ['tournament', tournamentId, 'bracket']});
-      toastSuccess('Bracket supprimé — catégorie réouverte');
+      toastSuccess('Tirage supprimé — catégorie réouverte');
     },
     onError: (e) => toastError(e.error || 'Erreur lors de la réinitialisation'),
   });
@@ -252,7 +252,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
             <ConfirmActionDialog
               trigger={<Button size="sm" disabled={startMutation.isPending}>Démarrer</Button>}
               title="Démarrer la catégorie ?"
-              description="Le bracket sera généré pour cette catégorie. Cette action est irréversible."
+              description="Le tirage sera généré pour cette catégorie. Cette action est irréversible."
               confirmLabel="Démarrer"
               onConfirm={() => startMutation.mutate(cat.id)}
               isLoading={startMutation.isPending}
@@ -278,8 +278,8 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
         <ConfirmActionDialog
           trigger={<Button size="sm" variant="outline"
                            disabled={resetMutation.isPending}>Réinitialiser</Button>}
-          title="Réinitialiser le bracket ?"
-          description="Le bracket sera supprimé et la catégorie repassera en statut Ouvert. Les inscriptions sont conservées."
+          title="Réinitialiser le tirage ?"
+          description="Le tirage sera supprimé et la catégorie repassera en statut Ouvert. Les inscriptions sont conservées."
           confirmLabel="Réinitialiser"
           confirmVariant="destructive"
           onConfirm={() => resetMutation.mutate(cat.id)}
@@ -320,7 +320,7 @@ const CategoriesTab = ({tournamentId, tournamentStatus}) => {
               </Button>
             }
             title="Démarrer toutes les catégories ?"
-            description="Les brackets seront générés pour toutes les catégories ouvertes ayant au moins 2 inscrits. Cette action est irréversible."
+            description="Les tirages seront générés pour toutes les catégories ouvertes ayant au moins 2 inscrits. Cette action est irréversible."
             confirmLabel="Démarrer tout"
             onConfirm={() => startAllMutation.mutate()}
             isLoading={startAllMutation.isPending}

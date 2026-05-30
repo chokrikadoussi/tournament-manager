@@ -500,7 +500,7 @@ export async function exportBracketPDF(params) {
     slugify(categoryName),
     date ? date.replace(/-/g, '') : null,
   ].filter(Boolean);
-  pdf.save(`bracket-${parts.join('-')}.pdf`);
+  pdf.save(`tirage-${parts.join('-')}.pdf`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -521,5 +521,5 @@ export async function exportAllBracketsPDF({ categories, tournamentName = '', li
 
   const slug     = slugify(tournamentName || 'tournoi');
   const dateSlug = date ? `-${date.replace(/-/g, '')}` : '';
-  pdf.save(`brackets-${slug}${dateSlug}.pdf`);
+  pdf.save(`tirages-${slug}${dateSlug}.pdf`);
 }

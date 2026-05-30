@@ -122,7 +122,7 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
     setShowExportDialog(false);
     try {
       const { exportBracketPDF } = await import('@/lib/bracketPDFExport.js');
-      const categoryName = startedCategories.find((c) => c.id === effectiveCategoryId)?.name ?? 'Bracket';
+      const categoryName = startedCategories.find((c) => c.id === effectiveCategoryId)?.name ?? 'Tirage';
       await exportBracketPDF({
         bracketMap,
         totalRounds,
@@ -178,7 +178,7 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
         <div className="text-center space-y-1">
           <p className="font-medium text-foreground">Tournoi pas encore démarré</p>
           <p className="text-sm">
-            Le bracket se génère au démarrage du tournoi. Vérifiez vos inscriptions
+            Le tirage se génère au démarrage du tournoi. Vérifiez vos inscriptions
             et vos catégories, puis démarrez le tournoi depuis l'onglet&nbsp;<strong>Général</strong>.
           </p>
         </div>
@@ -234,7 +234,7 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
           <div className="text-center space-y-1">
             <p className="font-medium text-foreground">Aucune catégorie démarrée</p>
             <p className="text-sm">
-              Ouvrez une catégorie et lancez-la pour générer son bracket.
+              Ouvrez une catégorie et lancez-la pour générer son tirage.
             </p>
           </div>
           {onSwitchTab && (
@@ -290,13 +290,13 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
       )}
 
       {getBracket.isError && (
-        <p className="text-sm text-destructive">Impossible de charger le bracket.</p>
+        <p className="text-sm text-destructive">Impossible de charger le tirage.</p>
       )}
 
-      {/* État vide — bracket chargé mais vide */}
+      {/* État vide — tirage chargé mais vide */}
       {startedCategories.length > 0 && !getBracket.isLoading && !getBracket.isError && totalRounds === 0 && (
         <p className="text-sm text-muted-foreground py-2">
-          Bracket non disponible pour cette catégorie.
+          Tirage non disponible pour cette catégorie.
         </p>
       )}
 
