@@ -152,9 +152,17 @@ export const updateSeed = async (
     throw new AppError('Tournament not found', 404);
   }
 
-  if (!VALID_STATUS.includes(tournament.status)) {
+  // Le seed reste éditable tant que le tournoi n'est pas terminé/annulé.
+  // (Modèle par catégorie : le tournoi peut être IN_PROGRESS alors que certaines
+  // catégories ne sont pas encore tirées.)
+  const SEED_EDITABLE = [
+    TournamentStatus.DRAFT,
+    TournamentStatus.OPEN,
+    TournamentStatus.IN_PROGRESS,
+  ];
+  if (!SEED_EDITABLE.includes(tournament.status)) {
     throw new AppError(
-      'Cannot update seed for a tournament that is not open',
+      'Cannot update seed for a tournament that is completed or cancelled',
       400,
     );
   }
@@ -168,16 +176,20 @@ export const updateSeed = async (
   }
 
   if (seed) {
+    // Unicité du seed PAR CATÉGORIE (chaque catégorie a ses propres têtes de série).
+    const effectiveCategoryId =
+      categoryId !== undefined ? categoryId : registration.categoryId;
     const existingSeed = await prisma.tournamentRegistration.findFirst({
       where: {
         tournamentId,
+        categoryId: effectiveCategoryId,
         seed,
         competitorId: { not: competitorId },
       },
     });
 
     if (existingSeed) {
-      throw new AppError('Seed already assigned in this tournament', 409);
+      throw new AppError('Seed already assigned in this category', 409);
     }
   }
 
