@@ -79,7 +79,8 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
   const currentRoundMatches = bracketMap.get(currentRound) || [];
   const totalRounds = bracket?.totalRounds ?? 0;
 
-  const finalMatch = bracketMap.get(totalRounds)?.[0];
+  const finalRoundMatches = bracketMap.get(totalRounds) ?? [];
+  const finalMatch = finalRoundMatches.find((m) => m.position === 0) ?? finalRoundMatches[0];
   const champion = finalMatch?.winnerId
     ? registrations.find((r) => r.competitor.id === finalMatch.winnerId)?.competitor?.name
     : null;
@@ -91,16 +92,11 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
     ? registrations.find((r) => r.competitor?.id === silverParticipant.competitorId)?.competitor?.name ?? null
     : null;
 
-  const semiMatches = totalRounds >= 2 ? (bracketMap.get(totalRounds - 1) ?? []) : [];
-  const bronzes = semiMatches
-    .filter((m) => m.winnerId)
-    .map((m) => {
-      const loser = m.participants.find((p) => p.competitorId !== m.winnerId);
-      return loser
-        ? registrations.find((r) => r.competitor?.id === loser.competitorId)?.competitor?.name ?? null
-        : null;
-    })
-    .filter(Boolean);
+  // Bronze unique : vainqueur de la petite finale (round = totalRounds, position 1).
+  const petiteFinale = finalRoundMatches.find((m) => m.position === 1);
+  const bronze = petiteFinale?.winnerId
+    ? registrations.find((r) => r.competitor?.id === petiteFinale.winnerId)?.competitor?.name ?? null
+    : null;
 
   const recordResultMutation = useMutation({
     mutationFn: ({ matchId, winnerId }) => matchesApi.recordResult(tournamentId, matchId, winnerId),
@@ -280,14 +276,14 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
         </Card>
       )}
 
-      {/* Bronzes — demi-finalistes perdants (médaille automatique en Taekwondo) */}
-      {bronzes.length > 0 && (
+      {/* Bronze — vainqueur de la petite finale */}
+      {bronze && (
         <Card className="border-orange-300/50 bg-orange-50/30">
           <CardContent className="flex items-center gap-3 py-4">
             <Medal className="h-6 w-6 text-orange-500 shrink-0" />
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Bronze</p>
-              <p className="text-base font-semibold text-orange-600">{bronzes.join(' · ')}</p>
+              <p className="text-base font-semibold text-orange-600">{bronze}</p>
             </div>
           </CardContent>
         </Card>
@@ -337,16 +333,22 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
               {currentRoundMatches.map((match) => {
                 const cfg = MATCH_STATUS_CONFIG[match.status] || { label: match.status, className: '' };
                 const StatusIcon = cfg.icon;
+                const isPetiteFinale = currentRound === totalRounds && match.position === 1;
                 const winner = match.winnerId
                   ? match.participants.find((p) => p.competitorId === match.winnerId)?.competitor
                   : null;
                 return (
                   <tr key={match.id} className={`bg-background hover:bg-muted/30 transition-colors ${ROW_CLASS[match.status] ?? ''}`}>
                     <td className="px-4 py-3">
-                      <Badge className={cfg.className}>
-                        {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
-                        {cfg.label}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge className={cfg.className}>
+                          {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                          {cfg.label}
+                        </Badge>
+                        {isPetiteFinale && (
+                          <span className="text-xs font-medium text-orange-600">Petite finale · bronze</span>
+                        )}
+                      </div>
                     </td>
                     {[0, 1].map((slot) => {
                       const p = match.participants[slot];
@@ -393,6 +395,7 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
           {currentRoundMatches.map((match) => {
             const cfg = MATCH_STATUS_CONFIG[match.status] || { label: match.status, className: '' };
             const StatusIcon = cfg.icon;
+            const isPetiteFinale = currentRound === totalRounds && match.position === 1;
             const winner = match.winnerId
               ? match.participants.find((p) => p.competitorId === match.winnerId)?.competitor
               : null;
@@ -402,10 +405,15 @@ const BracketsTab = ({ tournamentId, tournamentStatus, registrations, tournament
                 className={`rounded-lg border bg-background p-3 space-y-2 ${ROW_CLASS[match.status] ?? ''}`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <Badge className={cfg.className}>
-                    {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
-                    {cfg.label}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={cfg.className}>
+                      {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                      {cfg.label}
+                    </Badge>
+                    {isPetiteFinale && (
+                      <span className="text-xs font-medium text-orange-600">Petite finale · bronze</span>
+                    )}
+                  </div>
                   {match.status === 'READY' && (
                     <Button size="sm" onClick={() => setSelectedMatch(match)}>
                       <Pencil className="h-4 w-4 mr-1" />Saisir résultat

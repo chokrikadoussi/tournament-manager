@@ -44,111 +44,125 @@ export const recordResults = async (tournamentId, matchId, winnerId) => {
     throw new AppError('Winner must be one of the match participants', 400);
   }
 
-  // 3. Transaction pour enregistrer le résultat et mettre à jour le statut du match
+  // 3. Transaction : enregistrer le résultat, avancer le vainqueur, router le
+  //    perdant de demi-finale vers la petite finale, puis évaluer la complétion.
+  let tournamentCompleted = false;
+
   const updatedMatch = await prisma.$transaction(async (tx) => {
     await tx.match.update({
       where: { id: matchId },
-      data: {
-        winnerId,
-        status: MatchStatus.COMPLETED,
-      },
+      data: { winnerId, status: MatchStatus.COMPLETED },
     });
 
+    // Nombre de tours pour CETTE catégorie (chaque catégorie a son bracket).
+    const totalParticipants = await tx.tournamentRegistration.count({
+      where: { tournamentId, ...(match.categoryId && { categoryId: match.categoryId }) },
+    });
+    const totalRounds = getTotalRounds(totalParticipants);
+
+    // ── Avancer le vainqueur vers le match suivant ──
     if (match.nextMatchId) {
       const slot = match.position % 2 === 0 ? 0 : 1;
-
       await tx.matchParticipant.create({
-        data: {
-          matchId: match.nextMatchId,
-          competitorId: winnerId,
-          slot,
-        },
+        data: { matchId: match.nextMatchId, competitorId: winnerId, slot },
       });
-
-      const count = await tx.matchParticipant.count({
-        where: { matchId: match.nextMatchId },
-      });
-
+      const count = await tx.matchParticipant.count({ where: { matchId: match.nextMatchId } });
       if (count === 2) {
         await tx.match.update({
           where: { id: match.nextMatchId },
           data: { status: MatchStatus.READY },
         });
       }
+    }
 
-      // Gestion de la troisième place pour les tournois à élimination simple.
-      // On raisonne par catégorie (chaque catégorie a son propre bracket).
-      const totalParticipants = await tx.tournamentRegistration.count({
-        where: { tournamentId, ...(match.categoryId && { categoryId: match.categoryId }) },
+    // ── Petite finale (3e place) : router le perdant de demi-finale ──
+    if (match.round === totalRounds - 1) {
+      const petiteFinale = await tx.match.findFirst({
+        where: {
+          tournamentId,
+          round: totalRounds,
+          position: 1,
+          ...(match.categoryId && { categoryId: match.categoryId }),
+        },
+        select: { id: true },
       });
 
-      const totalRounds = getTotalRounds(totalParticipants);
-
-      if (match.round === totalRounds - 1) {
-        const FinalLoser = await tx.match.findFirst({
-          where: {
-            tournamentId: tournamentId,
-            round: totalRounds,
-            position: 1,
-            ...(match.categoryId && { categoryId: match.categoryId }),
-          },
-          select: { id: true },
-        });
-
-        if (FinalLoser) {
-          const loserId = match.participants.find(
-            (p) => p.competitorId !== winnerId,
-          )?.competitorId;
-
+      if (petiteFinale) {
+        const loserId = match.participants.find((p) => p.competitorId !== winnerId)?.competitorId;
+        const slot = match.position % 2 === 0 ? 0 : 1;
+        if (loserId) {
           await tx.matchParticipant.create({
-            data: {
-              matchId: FinalLoser.id,
-              competitorId: loserId,
-              slot,
+            data: { matchId: petiteFinale.id, competitorId: loserId, slot },
+          });
+        }
+
+        const pfCount = await tx.matchParticipant.count({ where: { matchId: petiteFinale.id } });
+        if (pfCount === 2) {
+          await tx.match.update({
+            where: { id: petiteFinale.id },
+            data: { status: MatchStatus.READY },
+          });
+        } else {
+          // L'autre demi-finale n'apporte pas de perdant (BYE, ex. 3 inscrits) :
+          // dès qu'aucune demie n'est plus jouable, le seul présent prend le
+          // bronze par forfait.
+          const semisRestantes = await tx.match.count({
+            where: {
+              tournamentId,
+              round: totalRounds - 1,
+              status: { in: [MatchStatus.PENDING, MatchStatus.READY] },
+              ...(match.categoryId && { categoryId: match.categoryId }),
             },
           });
-
-          const thirdPlaceCount = await tx.matchParticipant.count({
-            where: { matchId: FinalLoser.id },
-          });
-
-          if (thirdPlaceCount === 2) {
+          if (semisRestantes === 0 && pfCount === 1) {
+            const lone = await tx.matchParticipant.findFirst({
+              where: { matchId: petiteFinale.id },
+              select: { competitorId: true },
+            });
             await tx.match.update({
-              where: { id: FinalLoser.id },
-              data: { status: MatchStatus.READY },
+              where: { id: petiteFinale.id },
+              data: { status: MatchStatus.COMPLETED, winnerId: lone.competitorId },
             });
           }
         }
       }
-    } else {
-      // Pas de match suivant → c'est la finale. Avec des brackets par catégorie,
-      // chaque catégorie a sa propre finale : on termine la CATÉGORIE concernée,
-      // et le TOURNOI seulement quand toutes ses catégories non annulées le sont.
+    }
+
+    // ── Complétion : la catégorie (ou le tournoi sans catégorie) est terminée
+    //    quand il ne reste plus AUCUN match jouable (finale ET petite finale). ──
+    const remaining = await tx.match.count({
+      where: {
+        tournamentId,
+        status: { in: [MatchStatus.PENDING, MatchStatus.READY] },
+        ...(match.categoryId && { categoryId: match.categoryId }),
+      },
+    });
+
+    if (remaining === 0) {
       if (match.categoryId) {
         await tx.category.update({
           where: { id: match.categoryId },
           data: { status: TournamentStatus.COMPLETED },
         });
-
-        const pending = await tx.category.count({
+        const pendingCats = await tx.category.count({
           where: {
             tournamentId,
             status: { notIn: [TournamentStatus.COMPLETED, TournamentStatus.CANCELLED] },
           },
         });
-
-        if (pending === 0) {
+        if (pendingCats === 0) {
           await tx.tournament.update({
             where: { id: tournamentId },
             data: { status: TournamentStatus.COMPLETED },
           });
+          tournamentCompleted = true;
         }
       } else {
-        // Tournoi sans catégories : la finale termine le tournoi.
         await tx.tournament.update({
           where: { id: tournamentId },
           data: { status: TournamentStatus.COMPLETED },
         });
+        tournamentCompleted = true;
       }
     }
 
@@ -157,11 +171,8 @@ export const recordResults = async (tournamentId, matchId, winnerId) => {
       include: { participants: { include: { competitor: true } } },
     });
   });
-  return {
-    match: updatedMatch,
-    tournamentCompleted: !match.nextMatchId,
-    ...(!match.nextMatchId && { champion: winnerId }),
-  };
+
+  return { match: updatedMatch, tournamentCompleted };
 };
 
 export const getById = async (tournamentId, matchId) => {

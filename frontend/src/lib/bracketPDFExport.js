@@ -232,11 +232,24 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
     const matches = bracketMap.get(r) ?? [];
 
     if (r === totalRounds) {
+      const finalM  = matches.find((m) => m.position === 0) ?? matches[0];
+      const petiteM = matches.find((m) => m.position === 1);
+
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(7);
       pdf.setTextColor(...NAVY);
       pdf.text('FINALE', PW / 2, finalY - MH / 2 - 3, { align: 'center' });
-      if (matches[0]) drawBox(finalX, finalY, matches[0], 'final', FW);
+      if (finalM) drawBox(finalX, finalY, finalM, 'final', FW);
+
+      // Petite finale (3e place) — dessinée sous la finale.
+      if (petiteM) {
+        const pfY = finalY + MH + 16;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(5.8);
+        pdf.setTextColor(...MID);
+        pdf.text('PETITE FINALE · BRONZE', PW / 2, pfY - MH / 2 - 2.5, { align: 'center' });
+        drawBox(finalX, pfY, petiteM, 'final', FW);
+      }
       break;
     }
 
@@ -353,7 +366,8 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
   }
 
   // ── MEDALS ─────────────────────────────────────────────────────────────────
-  const finalMatch = bracketMap.get(totalRounds)?.[0];
+  const finalRoundMatches = bracketMap.get(totalRounds) ?? [];
+  const finalMatch = finalRoundMatches.find((m) => m.position === 0) ?? finalRoundMatches[0];
   const medalY     = footerY + 10;
   const PILL_W     = 18, PILL_H = 4.5;
 
@@ -383,16 +397,12 @@ function _drawPage(pdf, { bracketMap, totalRounds, categoryName, tournamentName 
       drawMedal(PW / 2 - 56, SILV_C, 'ARGENT', [silver.competitor.name]);
   }
 
-  if (totalRounds >= 2) {
-    const bronzeNames = (bracketMap.get(totalRounds - 1) ?? [])
-      .filter((m) => m.winnerId)
-      .map((m) => {
-        const loser = m.participants.find((p) => p.competitorId !== m.winnerId);
-        return loser?.competitor?.name ?? null;
-      })
-      .filter(Boolean);
-    if (bronzeNames.length > 0)
-      drawMedal(PW / 2 + 56, BRNZ_C, 'BRONZE', bronzeNames);
+  // Bronze unique : vainqueur de la petite finale (round = totalRounds, position 1).
+  const petiteFinale = finalRoundMatches.find((m) => m.position === 1);
+  if (petiteFinale?.winnerId) {
+    const bronzeWinner = petiteFinale.participants.find((p) => p.competitorId === petiteFinale.winnerId);
+    if (bronzeWinner?.competitor?.name)
+      drawMedal(PW / 2 + 56, BRNZ_C, 'BRONZE', [bronzeWinner.competitor.name]);
   }
 
   // Competitor count (bottom-right)

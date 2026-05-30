@@ -217,7 +217,9 @@ export const startCategory = async (tournamentId, categoryId) => {
   await prisma.$transaction(async (tx) => {
     switch (tournament.format) {
       case TournamentFormat.SINGLE_ELIM:
-        await generateSingleElim(tx, participantIds, tournamentId, registrations, false, categoryId);
+        // thirdPlaceMatch = true : on génère une "petite finale" pour départager
+        // une seule médaille de bronze.
+        await generateSingleElim(tx, participantIds, tournamentId, registrations, true, categoryId);
         break;
       case TournamentFormat.ROUND_ROBIN:
         await generateRoundRobin(tx, tournamentId, registrations, categoryId);
