@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { getToken, removeToken } from '@/lib/auth.js';
 
-export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/v1', timeout: 10_000 });
+// timeout 30s : au 1er hit après un redémarrage de dyno (déploiement ou cycle
+// quotidien Heroku), le cold boot prend ~9-11s. Un timeout à 10s faisait échouer
+// cette 1ère requête → l'utilisateur devait recharger. 30s couvre le cold boot.
+export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/v1', timeout: 30_000 });
 
 // Injecte le token JWT sur chaque requête
 api.interceptors.request.use((config) => {
