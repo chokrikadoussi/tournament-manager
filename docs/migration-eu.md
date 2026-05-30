@@ -168,3 +168,44 @@ migrations deviennent **DNS-only** (zéro redeploy front).
 - [ ] TTFB `eu` mesuré nettement < `us`
 - [ ] Front Vercel rebascule : login + navigation + tirage + export PDF OK
 - [ ] Observation 3–7 j sans régression → destruction app `us`
+
+---
+
+## 9. Journal d'exécution — RÉALISÉ le 2026-05-30
+
+Migration **exécutée et vérifiée**. `tournoi.chokri.tech` tourne désormais sur l'app `eu`.
+
+### Ce qui a été fait
+- **App eu créée** : `open-taekwondo-api-eu` (région `eu`, stack heroku-24), URL
+  `https://open-taekwondo-api-eu-6275b5231028.herokuapp.com`.
+- **DB eu** : addon `heroku-postgresql:essential-0` (PG 17.9), provisionnée en eu.
+- **Config vars** copiées (sauf `DATABASE_URL`), secrets non exposés.
+- **Code déployé** : 6 migrations appliquées.
+- **Données copiées et vérifiées identiques** : Tournois=2, Compétiteurs=175,
+  Inscriptions=349, Matchs=512, Catégories=20 (us == eu).
+- **Smoke test eu OK** : `/health`, login, `/tournaments`, `/categories`, `/bracket`
+  (tirage 4 rounds avec petite finale, ~0,13 s).
+- **Bascule front** : `VITE_API_URL` Vercel → URL eu + **fix axios timeout 10 s → 30 s**
+  (couvre le cold boot ~9-11 s, vraie cause du « reload »). Bundle prod vérifié :
+  pointe sur eu uniquement, `timeout:3e4`.
+- **Remotes git renommés** : `heroku` → **app eu** (déploiements futurs),
+  `heroku-us-old` → app us (rollback).
+
+### Écarts vs runbook
+- **Dyno eu = Basic** ($7/mois) et non Standard-1X : le fix timeout rend le preboot inutile.
+  → **−18 $/mois** une fois l'app us détruite. (Scalable si besoin de metrics/preboot.)
+- **`pg:copy` a échoué (504 répétés)** : l'API d'orchestration `api.data.heroku.com` était
+  injoignable depuis l'environnement d'exécution. Contourné par **`pg_restore` du dump local**
+  directement dans la base eu (connexion PG directe, qui elle fonctionnait). Une seule erreur
+  ignorée bénigne (`COMMENT ON EXTENSION pg_stat_statements`).
+- **Pas de fenêtre de maintenance** : usage quasi nul à 21h + DB 9 MB → copie sans coupure.
+
+### ⚠️ Reste à faire
+1. **Observation 3–7 jours**. ⚠️ Le rollback (revenir `VITE_API_URL` sur us + redeploy) n'est
+   sûr **que tant que eu n'a pas accumulé d'écritures** — sinon perte de données. Rollback =
+   uniquement pour un problème **immédiat**.
+2. **Détruire l'app us** une fois stable :
+   `heroku apps:destroy open-taekwondo-api --confirm open-taekwondo-api`
+   puis `git remote remove heroku-us-old`.
+3. **(Recommandé) Domaine custom** `api.chokri.tech` sur l'app eu (§6) → futures migrations
+   DNS-only, sans retoucher Vercel.
