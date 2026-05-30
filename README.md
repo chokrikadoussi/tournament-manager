@@ -58,6 +58,4 @@ Une application web qui couvre **tout le cycle de vie d'une compétition** :
 
 ## Documentation technique
 
-L'architecture, la stack, le modèle de données et la référence d'API sont décrits dans **[TECHNICAL.md](./TECHNICAL.md)**.
-
-> _Cette documentation technique a vocation à rejoindre le **Wiki GitHub** du dépôt une fois celui-ci activé._
+L'architecture, la stack, le modèle de données et la référence d'API sont décrits dans le **[Wiki GitHub](https://github.com/chokrikadoussi/tournament-manager/wiki)**.
